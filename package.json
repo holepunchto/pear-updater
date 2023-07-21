@@ -1,0 +1,28 @@
+{
+  "name": "@holepunchto/pear-updater",
+  "version": "0.0.0",
+  "description": "Pear Updater",
+  "main": "index.js",
+  "scripts": {
+    "test": "standard"
+  },
+  "dependencies": {
+    "@holepunchto/boot-drive": "^1.1.1",
+    "localdrive": "^1.9.0",
+    "ready-resource": "^1.0.0",
+    "streamx": "^2.15.0"
+  },
+  "devDependencies": {
+    "standard": "^17.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/holepunchto/pear-updater.git"
+  },
+  "author": "Mathias Buus (@mafintosh)",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/holepunchto/pear-updater/issues"
+  },
+  "homepage": "https://github.com/holepunchto/pear-updater"
+}
