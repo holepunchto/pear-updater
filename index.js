@@ -19,10 +19,21 @@ class Watcher extends Readable {
 }
 
 module.exports = class PearUpdater extends ReadyResource {
-  constructor (drive, { directory, swap, next, current, checkout = null, platform = process.platform, arch = process.arch, onupdating = noop, onupdate = noop } = {}) {
-    super()
-
+  constructor (drive, {
+    directory,
+    swap,
+    next,
+    current,
+    checkout = null,
+    byArch = true,
+    platform = process.platform,
+    arch = process.arch,
+    onupdating = noop,
+    onupdate = noop
+  } = {}) {
     if (!directory || !swap) throw new Error('directory, and swap must be set')
+
+    super()
 
     this.drive = drive
     this.checkout = checkout
@@ -45,7 +56,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.snapshot = null
     this.updating = null
 
-    this._byArch = '/by-arch/' + platform + '-' + arch
+    this._byArch = byArch ? '/by-arch/' + platform + '-' + arch : null
     this._watchers = new Set()
     this._bumpBound = this._bump.bind(this)
 
@@ -152,7 +163,7 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async _updateByArch () {
-    if (this.snapshot.core.length < 1) return false
+    if (this.snapshot.core.length < 1 || this._byArch === null) return false
 
     const blobs = await this.snapshot.getBlobs()
     const ranges = []
