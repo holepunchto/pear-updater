@@ -259,7 +259,7 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async _updateLinks () {
-    await fsp.symlink(this.swap, this.next, 'junction')
+    await fsp.symlink(path.resolve(this.swap), this.next, 'junction')
     if (process.platform === 'win32' && await exists(this.current)) await fsp.unlink(this.current)
     await fsp.rename(this.next, this.current)
   }
