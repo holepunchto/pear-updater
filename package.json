@@ -7,7 +7,7 @@
     "test": "standard"
   },
   "dependencies": {
-    "@holepunchto/boot-drive": "^1.1.1",
+    "@holepunchto/boot-drive": "^1.2.0",
     "localdrive": "^1.9.0",
     "ready-resource": "^1.0.0",
     "streamx": "^2.15.0"
