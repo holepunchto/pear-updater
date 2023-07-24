@@ -1,6 +1,5 @@
 const test = require('brittle')
 const tmp = require('test-tmp')
-const { once } = require('events')
 const Updater = require('../')
 const { createDrives, eventFlush } = require('./helpers')
 
@@ -119,15 +118,15 @@ test('updating and update events are triggered', async function (t) {
     updatingCalled = true
   })
 
-  // Can be triggered multiple times. We just test
-  // that it triggers at least once
-  const updateProm = once(u, 'update')
-  await u.ready()
+  let updateCalled = false
+  u.on('update', () => {
+    if (!updatingCalled) t.fail('Should call update after updating')
+    updateCalled = true
+  })
 
   await updateBin(drive, u, 0)
 
-  await updateProm
-  t.ok(updatingCalled, 'update called after updating')
+  t.ok(updateCalled, 'update called')
 })
 
 test('updating and update callbacks are called', async function (t) {
