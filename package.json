@@ -4,7 +4,7 @@
   "description": "Pear Updater",
   "main": "index.js",
   "scripts": {
-    "test": "standard"
+    "test": "standard && brittle test/*.js"
   },
   "dependencies": {
     "@holepunchto/boot-drive": "^1.2.0",
@@ -13,7 +13,12 @@
     "streamx": "^2.15.0"
   },
   "devDependencies": {
-    "standard": "^17.1.0"
+    "brittle": "^3.3.2",
+    "corestore": "^6.9.0",
+    "hyperdrive": "^11.4.0",
+    "random-access-memory": "^6.2.0",
+    "standard": "^17.1.0",
+    "test-tmp": "^1.0.0"
   },
   "repository": {
     "type": "git",
