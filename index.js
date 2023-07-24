@@ -56,6 +56,7 @@ module.exports = class PearUpdater extends ReadyResource {
 
     this.snapshot = null
     this._updating = null
+    this.updated = false
 
     this._byArch = byArch ? '/by-arch/' + platform + '-' + arch : null
     this._watchers = new Set()
@@ -97,6 +98,7 @@ module.exports = class PearUpdater extends ReadyResource {
     try {
       this._updating = this._update()
       await this._updating
+      this.updated = true
     } finally {
       this._updating = null
     }

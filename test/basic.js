@@ -122,8 +122,8 @@ test('updating and update events are triggered', async function (t) {
   // Can be triggered multiple times. We just test
   // that it triggers at least once
   const updateProm = once(u, 'update')
-
   await u.ready()
+
   await updateBin(drive, u, 0)
 
   await updateProm
@@ -158,6 +158,27 @@ test('updating and update callbacks are called', async function (t) {
   await u.ready()
 
   await updateBin(drive, u, 0)
+})
+
+test('updating flag', async function (t) {
+  const directory = await tmp(t)
+  const [drive, clone] = await createDrives(t)
+
+  let tick = 0
+
+  const u = new Updater(clone, {
+    directory,
+    platform: 'universal',
+    arch: 'universal'
+  })
+
+  await u.ready()
+  t.absent(u.updated, 'Not yet updated at start')
+  await updateBin(drive, u, tick++)
+  t.ok(u.updated, 'Updated now')
+
+  await updateBin(drive, u, tick++)
+  t.ok(u.updated, 'Stays updated')
 })
 
 async function updateBin (drive, u, tick) {
