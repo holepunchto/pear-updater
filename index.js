@@ -55,8 +55,9 @@ module.exports = class PearUpdater extends ReadyResource {
     this.current = current || path.join(directory, 'current')
 
     this.snapshot = null
-    this.updating = null
+    this.updated = false
 
+    this._updating = null
     this._byArch = byArch ? '/by-arch/' + platform + '-' + arch : null
     this._watchers = new Set()
     this._bumpBound = this._bump.bind(this)
@@ -65,6 +66,10 @@ module.exports = class PearUpdater extends ReadyResource {
     this.drive.core.on('truncate', this._bumpBound)
 
     this.ready().catch(safetyCatch)
+  }
+
+  get updating () {
+    return !!this._updating
   }
 
   async wait ({ length, fork }, opts) {
@@ -83,18 +88,19 @@ module.exports = class PearUpdater extends ReadyResource {
     if (this.opened === false) await this.ready()
     if (this.closing) throw new Error('Updater closing')
 
-    if (this.updating) await this.updating
-    if (this.updating) return this.updating // debounce
+    if (this._updating) await this._updating
+    if (this._updating) return this._updating // debounce
 
     if (this.drive.core.length === this.checkout.length && this.drive.core.fork === this.checkout.fork) {
       return this.checkout
     }
 
     try {
-      this.updating = this._update()
-      await this.updating
+      this._updating = this._update()
+      await this._updating
+      this.updated = true
     } finally {
-      this.updating = null
+      this._updating = null
     }
 
     return this.checkout
@@ -105,6 +111,9 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async _update () {
+    // Hand back control to caller, so this._updating gets set
+    await Promise.resolve()
+
     const old = this.checkout
     const checkout = {
       key: this.drive.core.id,

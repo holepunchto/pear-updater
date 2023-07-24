@@ -1,6 +1,6 @@
 const test = require('brittle')
 const Updater = require('../')
-const { createDrives, eventFlush } = require('./helpers')
+const { createDrives, createTouch } = require('./helpers')
 const tmp = require('test-tmp')
 const { realpath } = require('fs').promises
 
@@ -74,13 +74,3 @@ test('by-arch lib updates are allowed without swap if new file', async function 
 
   t.not(u.swap, prevSwap, 'swap update as the lib file changed')
 })
-
-function createTouch (drive, u) {
-  let tick = 0
-
-  return async function touchAndUpdate (key) {
-    await drive.put(key, '' + (tick++))
-    await eventFlush()
-    await u.update()
-  }
-}
