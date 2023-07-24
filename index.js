@@ -153,10 +153,16 @@ module.exports = class PearUpdater extends ReadyResource {
       await boot.warmup(entrypoint)
     }
 
-    await boot.warmup()
-
     const local = new Localdrive(this.swap, { atomic: true })
-    await local.put(boot.entrypoint, boot.stringify())
+    const hasEntrypoint = !!(await this.snapshot.entry(boot.entrypoint))
+
+    if (hasEntrypoint) {
+      await boot.warmup()
+      await local.put(boot.entrypoint, boot.stringify())
+    } else {
+      await local.del(boot.entrypoint)
+    }
+
     await local.close()
 
     if (updateSwap) await this._updateLinks()
