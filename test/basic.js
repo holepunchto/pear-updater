@@ -142,9 +142,7 @@ test('updating and update callbacks are called', async function (t) {
     platform: 'universal',
     arch: 'universal',
     onupdating: () => {
-      // TODO: decide whether updating should be true while
-      // running this callback (currently false, as this is
-      // the first async call)
+      if (!u.updating) t.fail('Should be updating when onupdating triggers')
       updatingCalled = true
     },
     onupdate: async () => {

@@ -111,6 +111,9 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async _update () {
+    // Hand back control to caller, so this._updating gets set
+    await Promise.resolve()
+
     const old = this.checkout
     const checkout = {
       key: this.drive.core.id,
