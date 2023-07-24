@@ -87,8 +87,8 @@ module.exports = class PearUpdater extends ReadyResource {
     if (this.opened === false) await this.ready()
     if (this.closing) throw new Error('Updater closing')
 
-    if (this.updating) await this._updating
-    if (this.updating) return this._updating // debounce
+    if (this._updating) await this._updating
+    if (this._updating) return this._updating // debounce
 
     if (this.drive.core.length === this.checkout.length && this.drive.core.fork === this.checkout.fork) {
       return this.checkout
