@@ -22,9 +22,9 @@ class Watcher extends Readable {
 module.exports = class PearUpdater extends ReadyResource {
   constructor (drive, {
     directory,
-    swap,
-    next,
-    current,
+    swap = null,
+    next = null,
+    current = null,
     checkout = null,
     byArch = true,
     platform = process.platform,
@@ -32,7 +32,7 @@ module.exports = class PearUpdater extends ReadyResource {
     onupdating = noop,
     onupdate = noop
   } = {}) {
-    if (!directory || !swap) throw new Error('directory, and swap must be set')
+    if (!directory) throw new Error('directory must be set')
 
     super()
 
@@ -44,9 +44,9 @@ module.exports = class PearUpdater extends ReadyResource {
     this.directory = directory
     this.swap = swap
 
-    this.swapNumber = Number(path.basename(this.swap)) || 0
-    this.swapCurrent = this.swapNumber
-    this.swapDirectory = path.dirname(this.swap)
+    this.swapNumber = 0
+    this.swapCurrent = 0
+    this.swapDirectory = null
 
     this.platform = platform
     this.arch = arch
@@ -237,6 +237,14 @@ module.exports = class PearUpdater extends ReadyResource {
         fork: this.drive.core.fork
       }
     }
+
+    if (!this.swap) {
+      this.swap = path.join(this.directory, 'by-dkey', this.drive.discoveryKey.toString('hex'), '0')
+    }
+
+    this.swapNumber = Number(path.basename(this.swap))
+    this.swapCurrent = this.swapNumber
+    this.swapDirectory = path.dirname(this.swap)
 
     // mostly for win but cleanup the links
     if (await exists(this.next)) {

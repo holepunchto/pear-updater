@@ -2,7 +2,6 @@ const test = require('brittle')
 const Updater = require('../')
 const { createDrives, eventFlush } = require('./helpers')
 const tmp = require('test-tmp')
-const path = require('path')
 
 test('basic full swap updates', async function (t) {
   const directory = await tmp(t)
@@ -11,10 +10,9 @@ test('basic full swap updates', async function (t) {
   let tick = 0
 
   const u = new Updater(clone, {
-    platform: 'universal',
-    arch: 'universal',
     directory,
-    swap: path.join(directory, 'swap', '0')
+    platform: 'universal',
+    arch: 'universal'
   })
 
   await u.ready()
