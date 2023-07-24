@@ -4,6 +4,7 @@ const ReadyResource = require('ready-resource')
 const Bootdrive = require('@holepunchto/boot-drive')
 const Localdrive = require('localdrive')
 const { Readable } = require('streamx')
+const safetyCatch = require('safety-catch')
 
 class Watcher extends Readable {
   constructor (updater, opts) {
@@ -63,7 +64,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.drive.core.on('append', this._bumpBound)
     this.drive.core.on('truncate', this._bumpBound)
 
-    this.ready().catch(noop)
+    this.ready().catch(safetyCatch)
   }
 
   async wait ({ length, fork }, opts) {
@@ -100,7 +101,7 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   _bump () {
-    this.update().catch(noop)
+    this.update().catch(safetyCatch)
   }
 
   async _update () {
@@ -111,7 +112,9 @@ module.exports = class PearUpdater extends ReadyResource {
       fork: this.drive.core.fork
     }
 
+    await this.onupdating(checkout, old)
     this.emit('updating', checkout, old)
+
     this.snapshot = this.drive.checkout(checkout.length)
 
     try {
