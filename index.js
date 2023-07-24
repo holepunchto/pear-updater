@@ -55,9 +55,9 @@ module.exports = class PearUpdater extends ReadyResource {
     this.current = current || path.join(directory, 'current')
 
     this.snapshot = null
-    this._updating = null
     this.updated = false
 
+    this._updating = null
     this._byArch = byArch ? '/by-arch/' + platform + '-' + arch : null
     this._watchers = new Set()
     this._bumpBound = this._bump.bind(this)
