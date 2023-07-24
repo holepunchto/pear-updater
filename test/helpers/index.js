@@ -4,7 +4,8 @@ const RAM = require('random-access-memory')
 
 module.exports = {
   eventFlush,
-  createDrives
+  createDrives,
+  createTouch
 }
 
 function eventFlush () {
@@ -44,3 +45,13 @@ async function createDrives (t) {
 }
 
 function noop () {}
+
+function createTouch (drive, u) {
+  let tick = 0
+
+  return async function touchAndUpdate (key) {
+    await drive.put(key, '' + (tick++))
+    await eventFlush()
+    await u.update()
+  }
+}
