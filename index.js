@@ -138,7 +138,7 @@ module.exports = class PearUpdater extends ReadyResource {
     for (const w of this._watchers) w.push(checkout)
   }
 
-  async _updateToSnapshot (checkout) {
+  async _updateToSnapshot () {
     const pkg = JSON.parse(((await this.snapshot.get('/package.json')) || '{}').toString())
     const main = pkg.main || '/index.js'
 
@@ -151,7 +151,7 @@ module.exports = class PearUpdater extends ReadyResource {
       platform: this.platform,
       arch: this.arch,
       sourceOverwrites: {
-        '/checkout.js': Buffer.from('module.exports = ' + JSON.stringify(checkout))
+        '/checkout.js': Buffer.from('module.exports = ' + JSON.stringify(this.checkout))
       },
       additionalBuiltins: ['electron']
     })
