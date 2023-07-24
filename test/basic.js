@@ -154,8 +154,6 @@ test('updating and update callbacks are called', async function (t) {
     }
   })
 
-  await u.ready()
-
   await updateBin(drive, u, 0)
 })
 
