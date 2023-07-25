@@ -127,7 +127,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.snapshot = this.drive.checkout(checkout.length)
 
     try {
-      await this._updateToSnapshot()
+      await this._updateToSnapshot(checkout)
     } finally {
       await this.snapshot.close()
       this.snapshot = null
@@ -141,7 +141,7 @@ module.exports = class PearUpdater extends ReadyResource {
     for (const w of this._watchers) w.push(checkout)
   }
 
-  async _updateToSnapshot () {
+  async _updateToSnapshot (checkout) {
     const pkg = JSON.parse(((await this.snapshot.get('/package.json')) || '{}').toString())
     const main = pkg.main || '/index.js'
 
@@ -154,7 +154,7 @@ module.exports = class PearUpdater extends ReadyResource {
       platform: this.platform,
       arch: this.arch,
       sourceOverwrites: {
-        '/checkout.js': Buffer.from('module.exports = ' + JSON.stringify(this.checkout))
+        '/checkout.js': Buffer.from('module.exports = ' + JSON.stringify(checkout))
       },
       additionalBuiltins: ['electron']
     })
