@@ -85,7 +85,10 @@ module.exports = class PearUpdater extends ReadyResource {
     if (this.opened === false) await this.ready()
     if (this.closing) throw new Error('Updater closing')
 
-    if (this.updating && !this._running) await Promise.resolve() // wait a tick, reentry from updating hook
+    // if updating is set, but nothing is running we need to wait a tick
+    // this can only happen if the onupgrading hook/event calls update recursively, so just for extra safety
+    while (this.updating && !this._running) await Promise.resolve()
+
     if (this._running) await this._running
     if (this._running) return this._running // debounce
 
@@ -111,9 +114,6 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async _update () {
-    // Hand back control to caller, so this._running gets set
-    await Promise.resolve()
-
     const old = this.checkout
     const checkout = {
       key: this.drive.core.id,
