@@ -49,8 +49,8 @@ function noop () {}
 function createTouch (drive, u) {
   let tick = 0
 
-  return async function touchAndUpdate (key) {
-    await drive.put(key, '' + (tick++))
+  return async function touchAndUpdate (key, src) {
+    await drive.put(key, src || ('' + (tick++)))
     await eventFlush()
     await u.update()
   }
