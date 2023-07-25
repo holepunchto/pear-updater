@@ -247,7 +247,9 @@ module.exports = class PearUpdater extends ReadyResource {
       }
     }
 
-    if (!this.swap) {
+    if (this.swap) {
+      this.swap = await verifySwap(this.swap)
+    } else {
       this.swap = path.join(this.directory, 'by-dkey', this.drive.discoveryKey.toString('hex'), '0')
     }
 
@@ -264,10 +266,12 @@ module.exports = class PearUpdater extends ReadyResource {
     // cleanup unused swaps...
     let target = null
     for (const name of await readdir(this.swapDirectory)) {
+      if (!/^\d$/.test(name)) continue // only nuke numeric folders EVER
       const swap = path.join(this.swapDirectory, name)
       if (swap === this.swap) continue
       if (!target) target = await realpath(this.current)
       if (swap === target) continue
+      if ((await realpath(swap)) === target) continue
       await nuke(swap) // unused, nuke it
     }
 
@@ -289,6 +293,13 @@ module.exports = class PearUpdater extends ReadyResource {
     if (process.platform === 'win32' && await exists(this.current)) await fsp.unlink(this.current)
     await fsp.rename(this.next, this.current)
   }
+}
+
+async function verifySwap (swap) {
+  const st = await fsp.lstat(swap)
+  if (st.isSymbolicLink()) return verifySwap(await fsp.realpath(swap))
+  if (st.isDirectory()) return swap
+  throw new Error('Swap must be a directory')
 }
 
 async function nuke (path) {
