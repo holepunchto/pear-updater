@@ -23,6 +23,8 @@ async function createDrives (t) {
   s1.pipe(s2).pipe(s1)
 
   t.teardown(() => {
+    if (drive.closed || clone.closed) return
+
     return new Promise(resolve => {
       let missing = 2
 

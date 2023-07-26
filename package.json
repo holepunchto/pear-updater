@@ -17,6 +17,7 @@
     "streamx": "^2.15.0"
   },
   "devDependencies": {
+    "b4a": "^1.6.4",
     "brittle": "^3.3.2",
     "corestore": "^6.9.0",
     "hyperdrive": "^11.4.0",
