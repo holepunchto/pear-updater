@@ -4,7 +4,6 @@ const Updater = require('../')
 const fsp = require('fs').promises
 const path = require('path')
 const { createDrives, createTouch } = require('./helpers')
-const b4a = require('b4a')
 
 test('updates entrypoint on disk and writes /checkout.js', async function (t) {
   const directory = await tmp(t)
@@ -78,15 +77,15 @@ test('files referenced in pear.entrypoints are present in the drive after update
   )
 
   // Entrypoints are locally available
-  const mainContent = b4a.toString(await clone.get('own-main.js', { wait: false }))
+  const mainContent = (await clone.get('own-main.js', { wait: false })).toString()
   t.is(mainContent, '// own-main\nmodule.exports = require("./checkout.js")')
 
-  const main2Content = b4a.toString(await clone.get('own-main2.js', { wait: false }))
+  const main2Content = (await clone.get('own-main2.js', { wait: false })).toString()
   t.is(main2Content, '// second main\nmodule.exports = require("./checkout.js")')
 
   // Other files are downloaded on-demand
   await t.exception(clone.get('/something-irrelevant.js', { wait: false }), /BLOCK_NOT_AVAILABLE/)
-  const fromRemote = b4a.toString(await clone.get('/something-irrelevant.js'))
+  const fromRemote = (await clone.get('/something-irrelevant.js')).toString()
   t.is(fromRemote, '// not an entrypoint', 'sanity check: available remotely')
 })
 
