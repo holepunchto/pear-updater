@@ -76,21 +76,18 @@ test('files referenced in pear.entrypoints are present in the drive after update
     '/package.json',
     JSON.stringify({ pear: { entrypoints: ['own-main.js', 'own-main2.js'] } })
   )
-  await drive.close()
 
   // Entrypoints are locally available
-  const mainContent = b4a.toString(await clone.get('own-main.js'))
+  const mainContent = b4a.toString(await clone.get('own-main.js', { wait: false }))
   t.is(mainContent, '// own-main\nmodule.exports = require("./checkout.js")')
 
-  const main2Content = b4a.toString(await clone.get('own-main2.js'))
+  const main2Content = b4a.toString(await clone.get('own-main2.js', { wait: false }))
   t.is(main2Content, '// second main\nmodule.exports = require("./checkout.js")')
 
   // Other files are downloaded on-demand
-  const raceRes = await Promise.race([
-    clone.get('/something-irrelevant.js'), // hangs forever (until replicating drive found)
-    new Promise(resolve => setTimeout(() => resolve('timeout'), 100))
-  ])
-  t.is(raceRes, 'timeout')
+  t.is(await clone.get('/something-irrelevant.js', { wait: false }), null)
+  const fromRemote = b4a.toString(await clone.get('/something-irrelevant.js'))
+  t.is(fromRemote, '// not an entrypoint', 'sanity check: available remotely')
 })
 
 function compile (entrypoint) {
