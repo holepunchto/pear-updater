@@ -42,7 +42,7 @@ test('file referenced in package.json main is put on disk', async function (t) {
 
   const touchAndUpdate = createTouch(drive, u)
 
-  await touchAndUpdate('/checkout.js', 'module.exports = {}')
+  await touchAndUpdate('/checkout.js', '')
   await touchAndUpdate('/own-main.js', 'module.exports = require("./checkout.js")')
   await touchAndUpdate('/package.json', JSON.stringify({ main: 'own-main.js' }))
 
