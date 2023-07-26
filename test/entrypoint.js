@@ -54,6 +54,41 @@ test('file referenced in package.json main is put on disk', async function (t) {
   t.is(checkout.key, drive.core.id)
 })
 
+test('files referenced in pear.entrypoints are present in the drive after update', async function (t) {
+  const directory = await tmp(t)
+  const [drive, clone] = await createDrives(t)
+
+  const u = new Updater(clone, {
+    directory,
+    platform: 'universal',
+    arch: 'universal'
+  })
+
+  const touchAndUpdate = createTouch(drive, u)
+
+  await touchAndUpdate('/checkout.js', '')
+  await touchAndUpdate('/own-main.js', '// own-main\nmodule.exports = require("./checkout.js")')
+  await touchAndUpdate('/own-main2.js', '// second main\nmodule.exports = require("./checkout.js")')
+  await touchAndUpdate('/something-irrelevant.js', '// not an entrypoint')
+
+  await touchAndUpdate(
+    '/package.json',
+    JSON.stringify({ pear: { entrypoints: ['own-main.js', 'own-main2.js'] } })
+  )
+
+  // Entrypoints are locally available
+  const mainContent = (await clone.get('own-main.js', { wait: false })).toString()
+  t.is(mainContent, '// own-main\nmodule.exports = require("./checkout.js")')
+
+  const main2Content = (await clone.get('own-main2.js', { wait: false })).toString()
+  t.is(main2Content, '// second main\nmodule.exports = require("./checkout.js")')
+
+  // Other files are downloaded on-demand
+  await t.exception(clone.get('/something-irrelevant.js', { wait: false }), /BLOCK_NOT_AVAILABLE/)
+  const fromRemote = (await clone.get('/something-irrelevant.js')).toString()
+  t.is(fromRemote, '// not an entrypoint', 'sanity check: available remotely')
+})
+
 function compile (entrypoint) {
   return new Function('require', 'return ' + entrypoint)(require) // eslint-disable-line
 }
