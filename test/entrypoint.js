@@ -53,3 +53,39 @@ test('file referenced in package.json main is put on disk', async function (t) {
   t.is(checkout.fork, drive.core.fork)
   t.is(checkout.key, drive.core.id)
 })
+
+test('files referenced in package.json pear.entrypoints are put on disk', async function (t) {
+  const directory = await tmp(t)
+  const [drive, clone] = await createDrives(t)
+
+  const u = new Updater(clone, {
+    directory,
+    platform: 'universal',
+    arch: 'universal'
+  })
+
+  const touchAndUpdate = createTouch(drive, u)
+
+  await touchAndUpdate('/checkout.js', '')
+  await touchAndUpdate('/own-main.js', 'module.exports = require("./checkout.js")')
+  await touchAndUpdate('/own-main2.js', 'module.exports = require("./checkout.js")')
+
+  await touchAndUpdate(
+    '/package.json',
+    JSON.stringify({ pear: { entrypoints: ['own-main.js', 'own-main2.js'] } })
+  )
+
+  const entrypoint1 = await fsp.readFile(path.join(u.swap, 'own-main.js'), 'utf-8')
+  const checkout1 = new Function('require', 'return ' + entrypoint1)(require) // eslint-disable-line
+
+  t.is(checkout1.length, drive.core.length)
+  t.is(checkout1.fork, drive.core.fork)
+  t.is(checkout1.key, drive.core.id)
+
+  const entrypoint2 = await fsp.readFile(path.join(u.swap, 'own-main2.js'), 'utf-8')
+  const checkout2 = new Function('require', 'return ' + entrypoint2)(require) // eslint-disable-line
+
+  t.is(checkout2.length, drive.core.length)
+  t.is(checkout2.fork, drive.core.fork)
+  t.is(checkout2.key, drive.core.id)
+})

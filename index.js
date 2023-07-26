@@ -161,11 +161,13 @@ module.exports = class PearUpdater extends ReadyResource {
 
     const entrypoints = pkg.pear?.entrypoints || pkg.pear?.stage?.entrypoints || []
 
+    const local = new Localdrive(this.swap, { atomic: true })
+
     for (const entrypoint of entrypoints) {
       await boot.warmup(entrypoint)
+      await local.put(entrypoint, boot.stringify(entrypoint))
     }
 
-    const local = new Localdrive(this.swap, { atomic: true })
     const hasEntrypoint = !!(await this.snapshot.entry(boot.entrypoint))
 
     if (hasEntrypoint) {
