@@ -85,7 +85,7 @@ test('files referenced in pear.entrypoints are present in the drive after update
   t.is(main2Content, '// second main\nmodule.exports = require("./checkout.js")')
 
   // Other files are downloaded on-demand
-  t.is(await clone.get('/something-irrelevant.js', { wait: false }), null)
+  await t.exception(clone.get('/something-irrelevant.js', { wait: false }), /BLOCK_NOT_AVAILABLE/)
   const fromRemote = b4a.toString(await clone.get('/something-irrelevant.js'))
   t.is(fromRemote, '// not an entrypoint', 'sanity check: available remotely')
 })
