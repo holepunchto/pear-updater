@@ -177,3 +177,22 @@ test('updating flag', async function (t) {
   await touchAndUpdate(BIN_PATH)
   t.ok(u.updated, 'Stays updated')
 })
+
+test('update.wait()', async function (t) {
+  const directory = await tmp(t)
+  const [drive, clone] = await createDrives(t)
+  t.plan(2)
+  const u = new Updater(clone, {
+    directory,
+    platform: 'universal',
+    arch: 'universal'
+  })
+  const touchAndUpdate = createTouch(drive, u)
+  const waiting = u.wait({ length: 2, fork: 0 })
+  touchAndUpdate(BIN_PATH)
+  await t.execution(waiting)
+  await t.exception(Promise.race([
+    u.wait({ length: 3, fork: 0 }),
+    new Promise((resolve, reject) => setTimeout(reject, 500, new Error('correctly waits')))
+  ]), 'correctly waits')
+})
