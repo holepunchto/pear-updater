@@ -71,7 +71,7 @@ module.exports = class PearUpdater extends ReadyResource {
 
   async wait ({ length, fork }, opts) {
     for await (const checkout of this.watch(opts)) {
-      if (fork < checkout.fork || (fork === checkout.fork && length < checkout.length)) return checkout
+      if (fork < checkout.fork || (fork === checkout.fork && length <= checkout.length)) return checkout
     }
 
     return null
