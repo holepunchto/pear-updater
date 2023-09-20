@@ -157,7 +157,7 @@ module.exports = class PearUpdater extends ReadyResource {
         '/checkout.js': Buffer.from('module.exports = ' + JSON.stringify(checkout))
       },
       additionalBuiltins: process.versions.bare
-        ? ['electron', 'net', 'util', 'stream', 'dns', 'https', 'tls', 'crypto', 'zlib', 'constants', 'readline']
+        ? ['electron', 'net', 'util', 'stream', 'dns', 'https', 'tls', 'crypto', 'zlib', 'constants', 'readline', 'pear']
         : ['electron']
     })
 
