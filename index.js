@@ -156,9 +156,14 @@ module.exports = class PearUpdater extends ReadyResource {
       sourceOverwrites: {
         '/checkout.js': Buffer.from('module.exports = ' + JSON.stringify(checkout))
       },
-      additionalBuiltins: process.versions.bare
-        ? ['electron', 'net', 'util', 'stream', 'dns', 'https', 'tls', 'crypto', 'zlib', 'constants', 'readline', 'pear']
-        : ['electron']
+      builtins: process.versions.bare
+        ? [
+            'electron', 'module', 'pear', 'addon', 'net', 'util', 'stream',
+            'dns', 'https', 'tls', 'crypto', 'zlib', 'constants', 'readline',
+            'fs', 'fs/promises', 'http', 'repl', 'url', 'events', 'child_process',
+            'path', 'os'
+          ]
+        : [...require('module').builtinModules, 'electron', 'addon'],
     })
 
     const entrypoints = pkg.pear?.entrypoints || pkg.pear?.stage?.entrypoints || []
