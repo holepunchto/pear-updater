@@ -160,7 +160,8 @@ module.exports = class PearUpdater extends ReadyResource {
       builtinsMap: this.builtinsMap,
       sourceOverwrites: {
         '/checkout.js': Buffer.from('module.exports = ' + JSON.stringify(checkout))
-      }
+      },
+      additionalBuiltins: ['electron']
     })
 
     const entrypoints = pkg.pear?.entrypoints || pkg.pear?.stage?.entrypoints || []
