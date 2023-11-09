@@ -51,6 +51,8 @@ module.exports = class PearUpdater extends ReadyResource {
     this.platform = platform
     this.arch = arch
 
+    this.builtinsMap = null
+
     this.next = next || path.join(directory, 'next')
     this.current = current || path.join(directory, 'current')
 
@@ -148,11 +150,14 @@ module.exports = class PearUpdater extends ReadyResource {
     const updateSwap = await this._updateByArch()
     if (updateSwap) await this._updateSwap()
 
+    this.builtinsMap = pkg.pear?.builtinsMap || null
+
     const boot = new Bootdrive(this.snapshot, {
       entrypoint: main,
       cwd: this.swap,
       platform: this.platform,
       arch: this.arch,
+      builtinsMap: this.builtinsMap,
       sourceOverwrites: {
         '/checkout.js': Buffer.from('module.exports = ' + JSON.stringify(checkout))
       },
