@@ -51,8 +51,6 @@ module.exports = class PearUpdater extends ReadyResource {
     this.platform = platform
     this.arch = arch
 
-    this.builtinsMap = null
-
     this.next = next || path.join(directory, 'next')
     this.current = current || path.join(directory, 'current')
 
@@ -143,21 +141,41 @@ module.exports = class PearUpdater extends ReadyResource {
     for (const w of this._watchers) w.push(checkout)
   }
 
+  async _needsFullSync (compat) {
+    if (this.checkout === null || this.checkout.length === 0) return false
+
+    const checkout = this.drive.checkout(this.checkout.length)
+
+    try {
+      const pkg = await readPackageJSON(checkout)
+      const oldCompat = pkg.pear?.platform?.fullSync || 0
+      return oldCompat === compat
+    } catch {
+      return true
+    } finally {
+      await checkout.close()
+    }
+  }
+
   async _updateToSnapshot (checkout) {
-    const pkg = JSON.parse(((await this.snapshot.get('/package.json')) || '{}').toString())
+    const pkg = await readPackageJSON(this.snapshot)
     const main = pkg.main || '/index.js'
 
     const updateSwap = await this._updateByArch()
     if (updateSwap) await this._updateSwap()
 
-    this.builtinsMap = pkg.pear?.builtinsMap || null
+    const builtinsMap = pkg.pear?.platform?.builtinsMap || null
+    const compat = pkg.pear?.platform?.fullSync || 0
+
+    // if the app indicates that its not fully compat, just download everthing in the bundle (minus by-arch)
+    if (!(await this._needsFullSync(compat))) await this._updateNonSparse()
 
     const boot = new Bootdrive(this.snapshot, {
       entrypoint: main,
       cwd: this.swap,
       platform: this.platform,
       arch: this.arch,
-      builtinsMap: this.builtinsMap,
+      builtinsMap,
       sourceOverwrites: {
         '/checkout.js': Buffer.from('module.exports = ' + JSON.stringify(checkout))
       },
@@ -183,6 +201,27 @@ module.exports = class PearUpdater extends ReadyResource {
     await local.close()
 
     if (updateSwap) await this._updateLinks()
+  }
+
+  async _updateNonSparse () {
+    const pending = []
+    const entries = []
+
+    for await (const name of this.snapshot.readdir('/')) {
+      if (name === 'by-arch') continue // handled by updateByArch
+      entries.push('/' + name)
+    }
+
+    for (const entry of entries) {
+      pending.push(this._downloadDiffAny(entry))
+    }
+
+    await Promise.all(pending)
+  }
+
+  async _downloadDiffAny (entry) {
+    if (await this.snapshot.get(entry)) return // mb its a file
+    return this.snapshot.downloadDiff(this.checkout.length, entry)
   }
 
   async _updateByArch () {
@@ -336,6 +375,10 @@ async function exists (path) {
   } catch {
     return false
   }
+}
+
+async function readPackageJSON (drive, pkg) {
+  return JSON.parse(((await drive.get('/package.json')) || '{}').toString())
 }
 
 function noop () {}
