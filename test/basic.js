@@ -196,3 +196,27 @@ test('update.wait()', async function (t) {
     new Promise((resolve, reject) => setTimeout(reject, 500, new Error('correctly waits')))
   ]), 'correctly waits')
 })
+
+test('compat diff triggers non-sparse sync', async function (t) {
+  const directory = await tmp(t)
+  const [drive, clone] = await createDrives(t)
+
+  const u = new Updater(clone, {
+    directory,
+    platform: 'universal',
+    arch: 'universal'
+  })
+
+  await u.ready()
+  const touchAndUpdate = createTouch(drive, u)
+
+  await touchAndUpdate(NON_BIN_PATH)
+
+  t.is(u.checkout.length, drive.core.length, 'up to date')
+  t.is(u.swapNumber, 0, 'still using swap 0')
+
+  await touchAndUpdate(NON_BIN_PATH)
+
+  t.is(u.checkout.length, drive.core.length, 'up to date')
+  t.is(u.swapNumber, 0, 'still using swap 0')
+})
