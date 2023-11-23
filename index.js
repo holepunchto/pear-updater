@@ -213,15 +213,10 @@ module.exports = class PearUpdater extends ReadyResource {
     }
 
     for (const entry of entries) {
-      pending.push(this._downloadDiffAny(entry))
+      pending.push(this.snapshot.download(entry))
     }
 
     await Promise.all(pending)
-  }
-
-  async _downloadDiffAny (entry) {
-    if (await this.snapshot.get(entry)) return // mb its a file
-    return this.snapshot.downloadDiff(this.checkout.length, entry)
   }
 
   async _updateByArch () {
