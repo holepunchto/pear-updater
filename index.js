@@ -29,6 +29,7 @@ module.exports = class PearUpdater extends ReadyResource {
     byArch = true,
     platform = process.platform,
     arch = process.arch,
+    additionalBuiltins = ['electron'],
     onupdating = noop,
     onupdate = noop
   } = {}) {
@@ -50,6 +51,8 @@ module.exports = class PearUpdater extends ReadyResource {
 
     this.platform = platform
     this.arch = arch
+
+    this.additionalBuiltins = additionalBuiltins
 
     this.next = next || path.join(directory, 'next')
     this.current = current || path.join(directory, 'current')
@@ -179,7 +182,7 @@ module.exports = class PearUpdater extends ReadyResource {
       sourceOverwrites: {
         '/checkout.js': Buffer.from('module.exports = ' + JSON.stringify(checkout))
       },
-      additionalBuiltins: ['electron']
+      additionalBuiltins: this.additionalBuiltins
     })
 
     const entrypoints = pkg.pear?.entrypoints || pkg.pear?.stage?.entrypoints || []
