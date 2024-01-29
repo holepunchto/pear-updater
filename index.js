@@ -1,7 +1,7 @@
 const path = require('path')
 const fsp = require('fs/promises')
 const ReadyResource = require('ready-resource')
-const Bootdrive = require('@holepunchto/boot-drive')
+const Bootdrive = require('boot-drive')
 const Localdrive = require('localdrive')
 const { Readable } = require('streamx')
 const safetyCatch = require('safety-catch')

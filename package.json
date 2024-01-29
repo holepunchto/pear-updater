@@ -1,5 +1,5 @@
 {
-  "name": "@holepunchto/pear-updater",
+  "name": "pear-updater",
   "version": "2.0.0",
   "description": "Pear Updater",
   "main": "index.js",
@@ -10,7 +10,7 @@
     "test": "standard && brittle test/*.js"
   },
   "dependencies": {
-    "@holepunchto/boot-drive": "^2.0.2",
+    "boot-drive": "^2.0.2",
     "localdrive": "^1.9.0",
     "ready-resource": "^1.0.0",
     "safety-catch": "^1.0.2",
@@ -28,7 +28,7 @@
     "type": "git",
     "url": "https://github.com/holepunchto/pear-updater.git"
   },
-  "author": "Mathias Buus (@mafintosh)",
+  "author": "Holepunch",
   "license": "UNLICENSED",
   "bugs": {
     "url": "https://github.com/holepunchto/pear-updater/issues"
