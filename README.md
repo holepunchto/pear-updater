@@ -3,13 +3,13 @@
 The updater the pear platform runs on.
 
 ```
-npm install @holepunchto/pear-updater
+npm install pear-updater
 ```
 
 ## Usage
 
 ``` js
-const PearUpdater = require('@holepunchto/pear-updater')
+const PearUpdater = require('pear-updater')
 
 const u = new PearUpdater(drive, {
   directory: '/where/is/platform/dir',
