@@ -37,5 +37,6 @@ function createTouch (drive, u) {
     await drive.put(key, src || ('' + (tick++)))
     await eventFlush()
     await u.update()
+    await u.applyUpdate()
   }
 }

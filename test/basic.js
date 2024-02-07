@@ -12,8 +12,7 @@ test('basic full swap updates', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   const touchAndUpdate = createTouch(drive, u)
@@ -49,8 +48,7 @@ test('basic non-swap updates', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   await u.ready()
@@ -76,8 +74,7 @@ test('some non-swap, then swap, then non-swap updates', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   await u.ready()
@@ -108,8 +105,7 @@ test('updating and update events are triggered', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
   const touchAndUpdate = createTouch(drive, u)
 
@@ -139,8 +135,7 @@ test('updating and update callbacks are called', async function (t) {
   let updatingCalled = false
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal',
+    host: 'universal-universal',
     onupdating: () => {
       if (!u.updating) t.fail('Should be updating when onupdating triggers')
       updatingCalled = true
@@ -163,8 +158,7 @@ test('updating flag', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
   const touchAndUpdate = createTouch(drive, u)
 
@@ -184,8 +178,7 @@ test('update.wait()', async function (t) {
   t.plan(2)
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
   const touchAndUpdate = createTouch(drive, u)
   const waiting = u.wait({ length: 2, fork: 0 })
@@ -203,8 +196,7 @@ test('compat diff triggers non-sparse sync', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   await u.ready()

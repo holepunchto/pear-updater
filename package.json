@@ -9,9 +9,22 @@
   "scripts": {
     "test": "standard && brittle test/*.js"
   },
+  "imports": {
+    "fs/*": {
+      "bare": "bare-fs/*",
+      "default": "fs/*"
+    },
+    "path": {
+      "bare": "bare-path",
+      "default": "path"
+    }
+  },
   "dependencies": {
-    "boot-drive": "^2.0.2",
+    "bare-bundle": "^1.1.2",
+    "drive-bundler": "^1.3.2",
+    "fs-native-extensions": "^1.2.5",
     "localdrive": "^1.9.0",
+    "read-write-mutexify": "^2.1.0",
     "ready-resource": "^1.0.0",
     "safety-catch": "^1.0.2",
     "streamx": "^2.15.0"

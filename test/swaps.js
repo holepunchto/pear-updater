@@ -11,8 +11,7 @@ test('by-arch changes causes swap and updates symlink', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   const touchAndUpdate = createTouch(drive, u)
@@ -35,8 +34,7 @@ test('by-arch changes are ignored if not relevant', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   const touchAndUpdate = createTouch(drive, u)
@@ -56,8 +54,7 @@ test('by-arch lib updates are allowed without swap if new file', async function 
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   const touchAndUpdate = createTouch(drive, u)
@@ -82,8 +79,7 @@ test('never nukes anything thats not a swap', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   {

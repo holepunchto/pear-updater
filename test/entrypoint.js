@@ -1,5 +1,6 @@
 const test = require('brittle')
 const tmp = require('test-tmp')
+const nodeBundle = require('node-bare-bundle')
 const Updater = require('../')
 const fsp = require('fs').promises
 const path = require('path')
@@ -11,8 +12,7 @@ test('updates entrypoint on disk and writes /checkout.js', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   const touchAndUpdate = createTouch(drive, u)
@@ -22,8 +22,8 @@ test('updates entrypoint on disk and writes /checkout.js', async function (t) {
   await touchAndUpdate('/checkout.js', 'module.exports = {}')
   await touchAndUpdate('/index.js', 'module.exports = require("./checkout.js")')
 
-  const entrypoint = await fsp.readFile(path.join(u.swap, 'index.js'), 'utf-8')
-  const checkout = compile(entrypoint)
+  const entrypoint = await fsp.readFile(path.join(u.swap, 'index.bundle'))
+  const checkout = nodeBundle(entrypoint)
 
   t.is(checkout.length, drive.core.length)
   t.is(checkout.fork, drive.core.fork)
@@ -36,8 +36,7 @@ test('file referenced in package.json main is put on disk', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   const touchAndUpdate = createTouch(drive, u)
@@ -46,22 +45,21 @@ test('file referenced in package.json main is put on disk', async function (t) {
   await touchAndUpdate('/own-main.js', 'module.exports = require("./checkout.js")')
   await touchAndUpdate('/package.json', JSON.stringify({ main: 'own-main.js' }))
 
-  const entrypoint = await fsp.readFile(path.join(u.swap, 'own-main.js'), 'utf-8')
-  const checkout = compile(entrypoint)
+  const entrypoint = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
+  const checkout = nodeBundle(entrypoint)
 
   t.is(checkout.length, drive.core.length)
   t.is(checkout.fork, drive.core.fork)
   t.is(checkout.key, drive.core.id)
 })
 
-test('files referenced in pear.entrypoints are present in the drive after update', async function (t) {
+test('files referenced in pear.subsystems are present in the drive after update', async function (t) {
   const directory = await tmp(t)
   const [drive, clone] = await createDrives(t)
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   const touchAndUpdate = createTouch(drive, u)
@@ -73,14 +71,14 @@ test('files referenced in pear.entrypoints are present in the drive after update
 
   await touchAndUpdate(
     '/package.json',
-    JSON.stringify({ pear: { entrypoints: ['own-main.js', 'own-main2.js'] } })
+    JSON.stringify({ pear: { subsystems: ['own-main.js', 'own-main2.js'] } })
   )
 
   // Entrypoints are locally available
-  const mainContent = (await clone.get('own-main.js', { wait: false })).toString()
+  const mainContent = (await clone.get('/own-main.js', { wait: false })).toString()
   t.is(mainContent, '// own-main\nmodule.exports = require("./checkout.js")')
 
-  const main2Content = (await clone.get('own-main2.js', { wait: false })).toString()
+  const main2Content = (await clone.get('/own-main2.js', { wait: false })).toString()
   t.is(main2Content, '// second main\nmodule.exports = require("./checkout.js")')
 
   // Other files are downloaded on-demand
@@ -95,8 +93,7 @@ test('all files are present if compat changes', async function (t) {
 
   const u = new Updater(clone, {
     directory,
-    platform: 'universal',
-    arch: 'universal'
+    host: 'universal-universal'
   })
 
   const touchAndUpdate = createTouch(drive, u)
@@ -112,16 +109,12 @@ test('all files are present if compat changes', async function (t) {
   )
 
   // Entrypoints are locally available
-  const mainContent = (await clone.get('own-main.js', { wait: false })).toString()
+  const mainContent = (await clone.get('/own-main.js', { wait: false })).toString()
   t.is(mainContent, '// own-main\nmodule.exports = require("./checkout.js")')
 
-  const main2Content = (await clone.get('own-main2.js', { wait: false })).toString()
+  const main2Content = (await clone.get('/own-main2.js', { wait: false })).toString()
   t.is(main2Content, '// second main\nmodule.exports = require("./checkout.js")')
 
-  const otherContent = (await clone.get('something-irrelevant.js', { wait: false })).toString()
+  const otherContent = (await clone.get('/something-irrelevant.js', { wait: false })).toString()
   t.is(otherContent, '// not an entrypoint')
 })
-
-function compile (entrypoint) {
-  return new Function('require', 'return ' + entrypoint)(require) // eslint-disable-line
-}

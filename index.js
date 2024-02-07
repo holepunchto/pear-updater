@@ -1,7 +1,10 @@
 const path = require('path')
-const fsp = require('fs/promises')
+const fs = require('fs')
+const { waitForLock } = require('fs-native-extensions')
+const RW = require('read-write-mutexify')
 const ReadyResource = require('ready-resource')
-const Bootdrive = require('boot-drive')
+const DriveBundler = require('drive-bundler')
+const BareBundle = require('bare-bundle')
 const Localdrive = require('localdrive')
 const { Readable } = require('streamx')
 const safetyCatch = require('safety-catch')
@@ -22,14 +25,13 @@ class Watcher extends Readable {
 module.exports = class PearUpdater extends ReadyResource {
   constructor (drive, {
     directory,
+    lock = null,
     swap = null,
     next = null,
     current = null,
     checkout = null,
     byArch = true,
-    platform = process.platform,
-    arch = process.arch,
-    additionalBuiltins = ['electron'],
+    host = getDefaultHost(),
     onupdating = noop,
     onupdate = noop
   } = {}) {
@@ -44,15 +46,13 @@ module.exports = class PearUpdater extends ReadyResource {
 
     this.directory = directory
     this.swap = swap
+    this.lock = lock
 
     this.swapNumber = 0
     this.swapCurrent = 0
     this.swapDirectory = null
 
-    this.platform = platform
-    this.arch = arch
-
-    this.additionalBuiltins = additionalBuiltins
+    this.host = host
 
     this.next = next || path.join(directory, 'next')
     this.current = current || path.join(directory, 'current')
@@ -61,8 +61,12 @@ module.exports = class PearUpdater extends ReadyResource {
     this.updated = false
     this.updating = false
 
+    this._mutex = new RW()
     this._running = null
-    this._byArch = byArch ? '/by-arch/' + platform + '-' + arch : null
+    this._lockFd = 0
+    this._shouldUpdateSwap = false
+    this._entrypoint = null
+    this._byArch = byArch ? '/by-arch/' + host : null
     this._watchers = new Set()
     this._bumpBound = this._bump.bind(this)
 
@@ -103,7 +107,6 @@ module.exports = class PearUpdater extends ReadyResource {
       this.updating = true
       this._running = this._update()
       await this._running
-      this.updated = true
     } finally {
       this._running = null
       this.updating = false
@@ -137,6 +140,7 @@ module.exports = class PearUpdater extends ReadyResource {
     }
 
     this.checkout = checkout
+    this.updated = true
 
     await this.onupdate(checkout, old)
     this.emit('update', checkout, old)
@@ -160,50 +164,125 @@ module.exports = class PearUpdater extends ReadyResource {
     }
   }
 
+  async _bundleEntrypointAndWarmup (main, subsystems) {
+    if (main === null && await this.snapshot.entry('/index.js')) main = '/index.js'
+
+    const b = new DriveBundler(this.snapshot, {
+      entrypoint: main,
+      cwd: this.swap,
+      absolutePrebuilds: false
+    })
+
+    const pending = [main ? b.bundle() : null]
+    for (const sub of subsystems) pending.push(b.bundle(sub))
+
+    const [mainBundle] = await Promise.all(pending)
+    return mainBundle
+  }
+
   async _updateToSnapshot (checkout) {
     const pkg = await readPackageJSON(this.snapshot)
-    const main = pkg.main || '/index.js'
+    const main = pkg.main || null
 
     const updateSwap = await this._updateByArch()
     if (updateSwap) await this._updateSwap()
 
-    const builtinsMap = pkg.pear?.platform?.builtinsMap || null
     const compat = pkg.pear?.platform?.fullSync || 0
+    const subsystems = pkg.subsystems || pkg.pear?.subsystems || []
 
     // if the app indicates that its not fully compat, just download everthing in the bundle (minus by-arch)
     if (!(await this._needsFullSync(compat))) await this._updateNonSparse()
 
-    const boot = new Bootdrive(this.snapshot, {
-      entrypoint: main,
-      cwd: this.swap,
-      platform: this.platform,
-      arch: this.arch,
-      builtinsMap,
-      sourceOverwrites: {
-        '/checkout.js': Buffer.from('module.exports = ' + JSON.stringify(checkout))
-      },
-      additionalBuiltins: this.additionalBuiltins
+    const boot = await this._bundleEntrypointAndWarmup(main, subsystems)
+
+    if (!boot) { // no main -> no boot.bundle -> return early
+      await this._mutex.write.lock()
+      this._entrypoint = null
+      this._shouldUpdateSwap = updateSwap
+      this._mutex.write.unlock()
+      return
+    }
+
+    const bundle = new BareBundle()
+
+    bundle.main = boot.entrypoint
+    bundle.resolutions = boot.resolutions
+    for (const [key, source] of Object.entries(boot.sources)) {
+      bundle.write(key, source)
+    }
+
+    bundle.write('/checkout.js', Buffer.from('module.exports = ' + JSON.stringify(checkout)))
+
+    const entrypointNoExt = boot.entrypoint.replace(/\.[^.]+$/, '')
+    const bundlePath = entrypointNoExt + (updateSwap ? '.bundle' : '.next.bundle')
+
+    await this._mutex.write.lock()
+
+    try {
+      const local = new Localdrive(this.swap, { atomic: true })
+      await local.put(bundlePath, bundle.toBuffer())
+      await local.close()
+
+      this._entrypoint = path.join(this.swap, entrypointNoExt)
+      this._shouldUpdateSwap = updateSwap
+    } finally {
+      this._mutex.write.unlock()
+    }
+  }
+
+  async _getLock () {
+    if (this.lock === null) return 0
+
+    const fd = await new Promise((resolve, reject) => {
+      fs.open(this.lock, 'w+', function (err, fd) {
+        if (err) return reject(err)
+        resolve(fd)
+      })
     })
 
-    const entrypoints = pkg.pear?.entrypoints || pkg.pear?.stage?.entrypoints || []
+    await waitForLock(fd)
 
-    for (const entrypoint of entrypoints) {
-      await boot.warmup(entrypoint)
+    return fd
+  }
+
+  async _autocorrect () {
+    const lock = await this._getLock()
+
+    if (await exists(this.next) && await exists(this.current)) {
+      try {
+        await fs.promises.unlink(this.next)
+      } catch {
+        // just ignore
+      }
     }
 
-    const local = new Localdrive(this.swap, { atomic: true })
-    const hasEntrypoint = !!(await this.snapshot.entry(boot.entrypoint))
+    if (lock) await closeFd(lock)
+  }
 
-    if (hasEntrypoint) {
-      await boot.warmup()
-      await local.put(boot.entrypoint, boot.stringify())
-    } else {
-      await local.del(boot.entrypoint)
+  async applyUpdate () {
+    await this._mutex.write.lock()
+    let lock = 0
+
+    try {
+      if (!this.updated) return null
+
+      lock = await this._getLock()
+
+      if (this._shouldUpdateSwap) {
+        await fs.promises.symlink(path.resolve(this.swap), this.next, 'junction')
+        if (isWindows() && await exists(this.current)) await fs.promises.unlink(this.current)
+        await fs.promises.rename(this.next, this.current)
+      } else if (this._entrypoint) {
+        await fs.promises.rename(this._entrypoint + '.next.bundle', this._entrypoint + '.bundle')
+      }
+
+      this.emit('update-applied', this.checkout)
+
+      return this.checkout
+    } finally {
+      if (lock) await closeFd(lock)
+      this._mutex.write.unlock()
     }
-
-    await local.close()
-
-    if (updateSwap) await this._updateLinks()
   }
 
   async _updateNonSparse () {
@@ -299,11 +378,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.swapCurrent = this.swapNumber
     this.swapDirectory = path.dirname(this.swap)
 
-    // mostly for win but cleanup the links
-    if (await exists(this.next)) {
-      if (await exists(this.current)) await fsp.unlink(this.current)
-      await fsp.rename(this.next, this.current)
-    }
+    await this._autocorrect()
 
     // cleanup unused swaps...
     let target = null
@@ -314,6 +389,7 @@ module.exports = class PearUpdater extends ReadyResource {
       if (!target) target = await realpath(this.current)
       if (swap === target) continue
       if ((await realpath(swap)) === target) continue
+      // TODO: run the nuke after an interval to avoid weird edge cases with someone somehow in the old one
       await nuke(swap) // unused, nuke it
     }
 
@@ -329,28 +405,24 @@ module.exports = class PearUpdater extends ReadyResource {
     for (const w of this._watchers) w.push(null)
     this._watchers.clear()
   }
-
-  async _updateLinks () {
-    await fsp.symlink(path.resolve(this.swap), this.next, 'junction')
-    if (process.platform === 'win32' && await exists(this.current)) await fsp.unlink(this.current)
-    await fsp.rename(this.next, this.current)
-  }
 }
 
 async function verifySwap (swap) {
-  const st = await fsp.lstat(swap)
-  if (st.isSymbolicLink()) return verifySwap(await fsp.realpath(swap))
+  const st = await fs.promises.lstat(swap)
+  if (st.isSymbolicLink()) return verifySwap(await fs.promises.realpath(swap))
   if (st.isDirectory()) return swap
   throw new Error('Swap must be a directory')
 }
 
 async function nuke (path) {
-  await fsp.rm(path, { recursive: true })
+  try {
+    await fs.promises.rm(path, { recursive: true })
+  } catch {}
 }
 
 async function realpath (path) {
   try {
-    return await fsp.realpath(path)
+    return await fs.promises.realpath(path)
   } catch (err) {
     if (err.code === 'ENOENT') return path
     throw err
@@ -359,7 +431,7 @@ async function realpath (path) {
 
 async function readdir (path) {
   try {
-    return await fsp.readdir(path)
+    return await fs.promises.readdir(path)
   } catch (err) {
     if (err.code === 'ENOENT') return []
     throw err
@@ -368,7 +440,7 @@ async function readdir (path) {
 
 async function exists (path) {
   try {
-    await fsp.lstat(path)
+    await fs.promises.lstat(path)
     return true
   } catch {
     return false
@@ -380,3 +452,17 @@ async function readPackageJSON (drive, pkg) {
 }
 
 function noop () {}
+
+function getDefaultHost () {
+  return require.addon ? require.addon.host : global.process.platform + '-' + global.process.arch
+}
+
+function isWindows () {
+  return global.Bare ? global.Bare.platform === 'win32' : global.process.platform === 'win32'
+}
+
+function closeFd (fd) {
+  return new Promise((resolve) => {
+    fs.close(fd, () => resolve())
+  })
+}
