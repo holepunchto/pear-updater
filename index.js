@@ -211,7 +211,7 @@ module.exports = class PearUpdater extends ReadyResource {
       bundle.write(key, source)
     }
 
-    bundle.write('/checkout.js', Buffer.from('module.exports = ' + JSON.stringify(checkout)))
+    bundle.write('/checkout.js', Buffer.from(`module.exports = { key: '${checkout.key}', length: ${checkout.length}, fork: ${checkout.fork} }\n`))
 
     const entrypointNoExt = boot.entrypoint.replace(/\.[^.]+$/, '')
     const bundlePath = entrypointNoExt + (updateSwap ? '.bundle' : '.next.bundle')
