@@ -1,6 +1,6 @@
 # Pear Updater
 
-The updater the pear platform runs on.
+The updater the pear-runtime runs on.
 
 ```
 npm install pear-updater
@@ -41,4 +41,4 @@ await u.wait(minimumCheckout, opts)
 
 ## License
 
-MIT
+Apache-2.0

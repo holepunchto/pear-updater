@@ -41,8 +41,8 @@
     "type": "git",
     "url": "https://github.com/holepunchto/pear-updater.git"
   },
-  "author": "Holepunch",
-  "license": "UNLICENSED",
+  "author": "Holepunch Inc",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/holepunchto/pear-updater/issues"
   },
