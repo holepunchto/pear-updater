@@ -6,6 +6,16 @@
   "files": [
     "index.js"
   ],
+  "imports": {
+    "fs/*": {
+      "bare": "bare-fs/*",
+      "default": "fs/*"
+    },
+    "path": {
+      "bare": "bare-path",
+      "default": "path"
+    }
+  },
   "scripts": {
     "test": "standard && brittle test/*.js"
   },
