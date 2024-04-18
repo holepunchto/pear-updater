@@ -194,8 +194,6 @@ module.exports = class PearUpdater extends ReadyResource {
     // if the app indicates that its not fully compat, just download everthing in the bundle (minus by-arch)
     if (!(await this._needsFullSync(compat))) await this._updateNonSparse()
 
-    await this._writeCheckout(checkout)
-
     const boot = await this._bundleEntrypointAndWarmup(main, subsystems)
 
     if (!boot) { // no main -> no boot.bundle -> return early
@@ -228,18 +226,6 @@ module.exports = class PearUpdater extends ReadyResource {
 
       this._entrypoint = path.join(this.swap, entrypointNoExt)
       this._shouldUpdateSwap = updateSwap
-    } finally {
-      this._mutex.write.unlock()
-    }
-  }
-
-  async _writeCheckout (checkout) {
-    await this._mutex.write.lock()
-
-    try {
-      const local = new Localdrive(this.swap, { atomic: true })
-      await local.put('length', c.encode(c.uint, checkout.length))
-      await local.close()
     } finally {
       this._mutex.write.unlock()
     }
@@ -290,6 +276,11 @@ module.exports = class PearUpdater extends ReadyResource {
       } else if (this._entrypoint) {
         await fs.promises.rename(this._entrypoint + '.next.bundle', this._entrypoint + '.bundle')
       }
+
+      // write checkout file
+      const local = new Localdrive(this.swap, { atomic: true })
+      await local.put('length', c.encode(c.uint, this.checkout.length))
+      await local.close()
 
       this.emit('update-applied', this.checkout)
 
