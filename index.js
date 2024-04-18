@@ -1,5 +1,6 @@
 const path = require('path')
 const fs = require('fs')
+const c = require('compact-encoding')
 const { waitForLock } = require('fs-native-extensions')
 const RW = require('read-write-mutexify')
 const ReadyResource = require('ready-resource')
@@ -193,6 +194,8 @@ module.exports = class PearUpdater extends ReadyResource {
     // if the app indicates that its not fully compat, just download everthing in the bundle (minus by-arch)
     if (!(await this._needsFullSync(compat))) await this._updateNonSparse()
 
+    await this._writeCheckout(checkout)
+
     const boot = await this._bundleEntrypointAndWarmup(main, subsystems)
 
     if (!boot) { // no main -> no boot.bundle -> return early
@@ -225,6 +228,18 @@ module.exports = class PearUpdater extends ReadyResource {
 
       this._entrypoint = path.join(this.swap, entrypointNoExt)
       this._shouldUpdateSwap = updateSwap
+    } finally {
+      this._mutex.write.unlock()
+    }
+  }
+
+  async _writeCheckout (checkout) {
+    await this._mutex.write.lock()
+
+    try {
+      const local = new Localdrive(this.swap, { atomic: true })
+      await local.put('length', c.encode(c.uint, checkout.length))
+      await local.close()
     } finally {
       this._mutex.write.unlock()
     }
