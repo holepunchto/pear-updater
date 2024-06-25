@@ -78,7 +78,9 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async wait ({ length, fork }, opts) {
+    console.log('waiting.....')
     for await (const checkout of this.watch(opts)) {
+      console.log('checkout....', checkout)
       if (fork < checkout.fork || (fork === checkout.fork && length <= checkout.length)) return checkout
     }
 
@@ -90,14 +92,17 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async update () {
+    console.log('pear updater updating...')
     if (this.opened === false) await this.ready()
     if (this.closing) throw new Error('Updater closing')
 
     // if updating is set, but nothing is running we need to wait a tick
     // this can only happen if the onupgrading hook/event calls update recursively, so just for extra safety
     while (this.updating && !this._running) await Promise.resolve()
+    console.log('running....')
 
     if (this._running) await this._running
+    console.log('debounce....')
     if (this._running) return this._running // debounce
 
     if (this.drive.core.length === this.checkout.length && this.drive.core.fork === this.checkout.fork) {
@@ -121,6 +126,7 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async _update () {
+    console.log('private updating...')
     const old = this.checkout
     const checkout = {
       key: this.drive.core.id,
