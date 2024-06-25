@@ -261,13 +261,16 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async applyUpdate () {
+    console.log('mutex write lock....')
     await this._mutex.write.lock()
     let lock = 0
 
     try {
       if (!this.updated) return null
 
+      console.log('getting lock')
       lock = await this._getLock()
+      console.log('locked')
 
       if (this._shouldUpdateSwap) {
         await fs.promises.symlink(path.resolve(this.swap), this.next, 'junction')
@@ -286,7 +289,9 @@ module.exports = class PearUpdater extends ReadyResource {
 
       return this.checkout
     } finally {
+      console.log('closing fd')
       if (lock) await closeFd(lock)
+      console.log('closed fd')
       this._mutex.write.unlock()
     }
   }
