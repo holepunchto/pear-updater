@@ -184,15 +184,20 @@ module.exports = class PearUpdater extends ReadyResource {
     for (const sub of subsystems) pending.push(b.bundle(sub))
 
     const [mainBundle] = await Promise.all(pending)
+    console.log('solved bundle promises')
     return mainBundle
   }
 
   async _updateToSnapshot (checkout) {
+    console.log('update to snapshot')
     const pkg = await readPackageJSON(this.snapshot)
     const main = pkg.main || null
 
+    console.log('updating by arch')
     const updateSwap = await this._updateByArch()
+    console.log('updated by arch')
     if (updateSwap) await this._updateSwap()
+    console.log('updated swap')
 
     const compat = pkg.pear?.platform?.fullSync || 0
     const subsystems = pkg.subsystems || pkg.pear?.subsystems || []
@@ -200,7 +205,9 @@ module.exports = class PearUpdater extends ReadyResource {
     // if the app indicates that its not fully compat, just download everthing in the bundle (minus by-arch)
     if (!(await this._needsFullSync(compat))) await this._updateNonSparse()
 
+    console.log('bundle entrypoint and warmup')
     const boot = await this._bundleEntrypointAndWarmup(main, subsystems)
+    console.log('bundle entrypoint and warmup done')
 
     if (!boot) { // no main -> no boot.bundle -> return early
       await this._mutex.write.lock()
@@ -223,7 +230,9 @@ module.exports = class PearUpdater extends ReadyResource {
     const entrypointNoExt = boot.entrypoint.replace(/\.[^.]+$/, '')
     const bundlePath = entrypointNoExt + (updateSwap ? '.bundle' : '.next.bundle')
 
+    console.log('mutex write lock')
     await this._mutex.write.lock()
+    console.log('mutex write lock done')
 
     try {
       const local = new Localdrive(this.swap, { atomic: true })
@@ -238,6 +247,7 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async _getLock () {
+    console.log('-get lock')
     if (this.lock === null) return 0
 
     const fd = await new Promise((resolve, reject) => {
@@ -248,6 +258,7 @@ module.exports = class PearUpdater extends ReadyResource {
     })
 
     await waitForLock(fd)
+    console.log('-get lock done')
 
     return fd
   }
@@ -303,6 +314,7 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async _updateNonSparse () {
+    console.log('update non sparse')
     const pending = []
     const entries = []
 
