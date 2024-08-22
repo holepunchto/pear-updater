@@ -378,9 +378,12 @@ module.exports = class PearUpdater extends ReadyResource {
 
     const swap = path.join(this.swapDirectory, swapNumber + '')
 
+    console.log("updating swap", this._byArch)
     const local = new Localdrive(swap)
     await this.snapshot.mirror(local, { prefix: this._byArch }).done()
+    console.log("mirror done")
     await local.close()
+    console.log("local closed")
 
     this.swap = swap
     this.swapNumber = swapNumber
