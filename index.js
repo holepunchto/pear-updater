@@ -343,11 +343,13 @@ module.exports = class PearUpdater extends ReadyResource {
       const blob = left && left.value.blob
 
       if (blob) {
+        console.log('update by arch blob')
         ranges.push(blobs.core.download({ start: blob.blockOffset, length: blob.blockLength }))
 
         // Just a sanity check so we dont use too much mem (2048 is arbitrary).
         // We just fall back to a full new local mirror if its a really big update
         if (ranges.length >= 2048) {
+          console.log('Ranges over')
           needsFullUpdate = true
           break
         }
@@ -383,8 +385,8 @@ module.exports = class PearUpdater extends ReadyResource {
     console.log('updating swap localdrive')
     await local.ready()
     console.log('updating swap localdrive ready')
-    this.snapshot.core.on('download', (i) => console.log('core donwload', i))
-    this.snapshot.blobs.core.on('download', (i) => console.log('blobs donwload', i))
+    // this.snapshot.core.on('download', (i) => console.log('core donwload', i))
+    // this.snapshot.blobs.core.on('download', (i) => console.log('blobs donwload', i))
     await this.snapshot.mirror(local, { prefix: this._byArch }).done()
     console.log('mirror done')
     await local.close()
