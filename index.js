@@ -171,7 +171,7 @@ module.exports = class PearUpdater extends ReadyResource {
     const b = new DriveBundler(this.snapshot, {
       entrypoint: main,
       cwd: this.swap,
-      absolutePrebuilds: false
+      absoluteFiles: false
     })
 
     const pending = [main ? b.bundle() : null]
