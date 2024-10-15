@@ -44,8 +44,8 @@
     "test-tmp": "^1.0.0"
   },
   "optionalDependencies": {
-    "bare-fs": "^2.1.1",
-    "bare-path": "^2.1.0"
+    "bare-fs": "^3.0.2",
+    "bare-path": "^3.0.0"
   },
   "repository": {
     "type": "git",
