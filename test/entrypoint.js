@@ -118,3 +118,54 @@ test('all files are present if compat changes', async function (t) {
   const otherContent = (await clone.get('/something-irrelevant.js', { wait: false })).toString()
   t.is(otherContent, '// not an entrypoint')
 })
+
+test.solo('unskippable updates', async function (t) {
+  const directory = await tmp(t)
+  console.log('directory', directory)
+  const [drive, clone] = await createDrives(t)
+  const u = new Updater(clone, {
+    directory,
+    host: 'universal-universal'
+  })
+
+  await drive.put('/checkout.js', '')
+  await drive.put('/own-main.js', 'module.exports = require("./checkout.js")')
+  await drive.put('/package.json', JSON.stringify({ main: 'own-main.js' }))
+  const unskippable = drive.core.length
+  console.log('unskippable', unskippable)
+
+  await drive.put('/package.json', JSON.stringify({ main: 'own-main.js', pear: { stage: { unskippableUpdates: [unskippable] } } }))
+
+  await u.update()
+  await u.applyUpdate()
+
+  const entrypoint = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
+  const checkout = nodeBundle(entrypoint)
+  console.log('checkoutlength', checkout.length)
+  console.log('clonecorelength', clone.core.length)
+
+  t.is(checkout.length, unskippable)
+  t.is(checkout.fork, drive.core.fork)
+  t.is(checkout.key, drive.core.id)
+
+  u.close()
+
+  const directory2 = await tmp(t)
+  console.log('directory2', directory2)
+  const u2 = new Updater(clone, {
+    directory: directory2,
+    host: 'universal-universal'
+  })
+
+  await u2.update()
+  await u2.applyUpdate()
+
+  const entrypoint2 = await fsp.readFile(path.join(u2.swap, 'own-main.bundle'), 'utf-8')
+  const checkout2 = nodeBundle(entrypoint2)
+  console.log('checkout2length', checkout2.length)
+  console.log('clonecorelength', clone.core.length)
+
+  t.is(checkout2.length, drive.core.length)
+  t.is(checkout2.fork, drive.core.fork)
+  t.is(checkout2.key, drive.core.id)
+})
