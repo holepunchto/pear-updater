@@ -279,7 +279,7 @@ module.exports = class PearUpdater extends ReadyResource {
 
       // write checkout file
       const local = new Localdrive(this.swap, { atomic: true })
-      await local.put('length', c.encode(c.uint, this.checkout.length))
+      await local.put('checkout', c.encode(checkout, { ...this.checkout, key: this.drive.core.key }))
       await local.close()
 
       this.emit('update-applied', this.checkout)
@@ -471,4 +471,24 @@ function closeFd (fd) {
   return new Promise((resolve) => {
     fs.close(fd, () => resolve())
   })
+}
+
+const checkout = {
+  preencode (state, m) {
+    c.fixed32.preencode(state, m.key)
+    c.uint.preencode(state, m.length)
+    c.uint.preencode(state, m.fork)
+  },
+  encode (state, m) {
+    c.fixed32.encode(state, m.key)
+    c.uint.encode(state, m.length)
+    c.uint.encode(state, m.fork)
+  },
+  decode (state) {
+    return {
+      key: c.fixed32.decode(state),
+      length: c.uint.decode(state),
+      fork: c.uint.decode(state)
+    }
+  }
 }
