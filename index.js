@@ -297,6 +297,8 @@ module.exports = class PearUpdater extends ReadyResource {
       await local.put('checkout', c.encode(checkout, { ...this.checkout, key: this.drive.core.key }))
       await local.close()
 
+      this._target = null
+
       this.emit('update-applied', this.checkout)
 
       return this.checkout
@@ -376,10 +378,6 @@ module.exports = class PearUpdater extends ReadyResource {
 
     this.swap = swap
     this.swapNumber = swapNumber
-  }
-
-  releaseTarget () {
-    this._target = null
   }
 
   async _open () {

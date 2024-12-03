@@ -134,6 +134,7 @@ test.solo('unskippable updates', async function (t) {
 
   await drive.put('/package.json', JSON.stringify({ main: 'own-main.js', pear: { stage: { unskippableUpdates: [unskippable] } } }))
 
+  await u.update()
   await u.applyUpdate()
 
   const entrypoint = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
@@ -143,8 +144,7 @@ test.solo('unskippable updates', async function (t) {
   t.is(checkout.fork, drive.core.fork)
   t.is(checkout.key, drive.core.id)
 
-  u.releaseTarget()
-
+  await u.update()
   await u.applyUpdate()
 
   const entrypoint2 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
