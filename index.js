@@ -61,7 +61,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.snapshot = null
     this.updated = false
     this.updating = false
-    this.target = null
+    this._target = null
 
     this._mutex = new RW()
     this._running = null
@@ -122,7 +122,6 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async _update () {
-    console.log('updater: _update')
     const old = this.checkout
     const checkout = {
       key: this.drive.core.id,
@@ -130,30 +129,22 @@ module.exports = class PearUpdater extends ReadyResource {
       fork: this.drive.core.fork
     }
 
-    // Target already reached, no need to update
-    if (this.target !== null && checkout.length >= this.target) {
-      console.log('not updating', this.target, checkout.length)
-      return
-    }
+    if (this._target !== null && this.checkout.length >= this._target) return
 
     await this.onupdating(checkout, old)
     this.emit('updating', checkout, old)
-    console.log('updater: updating', checkout.length, old.length)
 
     try {
       const latestPackage = JSON.parse(await this.drive.get('/package.json'))
-      console.log('updater: latest package', latestPackage)
       const unskippableUpdates = (latestPackage.pear?.stage?.unskippableUpdates || [])
         .map(parseInt)
         .filter(u => u > old.length)
         .sort((a, b) => a - b)
-      console.log('updater: sorted unskippableUpdates', old.length, unskippableUpdates)
       if (unskippableUpdates.length > 0) {
         checkout.length = unskippableUpdates[0]
-        if (!this._target) this.target = unskippableUpdates[0]
+        if (!this._target) this._target = unskippableUpdates[0]
       }
     } catch { /* ignore */ }
-    console.log('updater: checkout length', checkout.length)
     this.snapshot = this.drive.checkout(checkout.length)
 
     try {
@@ -178,9 +169,7 @@ module.exports = class PearUpdater extends ReadyResource {
     const checkout = this.drive.checkout(this.checkout.length)
 
     try {
-      // console.log('pkg1')
       const pkg = await readPackageJSON(checkout)
-      // console.log('pkg2', pkg)
       const oldCompat = pkg.pear?.platform?.fullSync || 0
       return oldCompat === compat
     } catch {
@@ -244,6 +233,7 @@ module.exports = class PearUpdater extends ReadyResource {
 
     await this._mutex.write.lock()
 
+    // NOTE: This is where we actually write to the disk
     try {
       const local = new Localdrive(this.swap, { atomic: true })
       await local.put(bundlePath, bundle.toBuffer())
