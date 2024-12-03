@@ -1,6 +1,6 @@
 {
   "name": "pear-updater",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "description": "Pear Updater",
   "main": "index.js",
   "files": [
