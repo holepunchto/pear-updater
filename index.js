@@ -105,6 +105,8 @@ module.exports = class PearUpdater extends ReadyResource {
       return this.checkout
     }
 
+    if (this._target !== null && this.checkout.length >= this._target) return this.checkout
+
     try {
       this.updating = true
       this._running = this._update()
@@ -129,15 +131,12 @@ module.exports = class PearUpdater extends ReadyResource {
       fork: this.drive.core.fork
     }
 
-    if (this._target !== null && this.checkout.length >= this._target) return
-
     await this.onupdating(checkout, old)
     this.emit('updating', checkout, old)
 
     try {
       const latestPackage = JSON.parse(await this.drive.get('/package.json'))
       const unskippableUpdates = (latestPackage.pear?.stage?.unskippableUpdates || [])
-        .map(parseInt)
         .filter(u => u > old.length)
         .sort((a, b) => a - b)
       if (unskippableUpdates.length > 0) {
