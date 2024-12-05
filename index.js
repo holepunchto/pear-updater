@@ -131,20 +131,25 @@ module.exports = class PearUpdater extends ReadyResource {
       fork: this.drive.core.fork
     }
 
-    await this.onupdating(checkout, old)
-    this.emit('updating', checkout, old)
+    this.snapshot = this.drive.checkout(checkout.length)
 
     try {
-      const latestPackage = JSON.parse(await this.drive.get('/package.json'))
+      const latestPackage = JSON.parse(await this.snapshot.get('/package.json'))
       const unskippableUpdates = (latestPackage.pear?.stage?.unskippableUpdates || [])
         .filter(u => u > old.length)
         .sort((a, b) => a - b)
       if (unskippableUpdates.length > 0) {
         checkout.length = unskippableUpdates[0]
-        if (!this._updateTarget) this._updateTarget = unskippableUpdates[0]
+        this.snapshot.close()
+        this.snapshot = this.drive.checkout(checkout.length)
+        if (!this._updateTarget) {
+          this._updateTarget = unskippableUpdates[0]
+        }
       }
     } catch { /* ignore */ }
-    this.snapshot = this.drive.checkout(checkout.length)
+
+    await this.onupdating(checkout, old)
+    this.emit('updating', checkout, old)
 
     try {
       await this._updateToSnapshot(checkout)
