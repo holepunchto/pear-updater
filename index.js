@@ -139,12 +139,10 @@ module.exports = class PearUpdater extends ReadyResource {
         .filter(u => u > old.length)
         .sort((a, b) => a - b)
       if (unskippableUpdates.length > 0) {
-        checkout.length = unskippableUpdates[0]
+        this._updateTarget = unskippableUpdates[0]
+        checkout.length = this._updateTarget
         this.snapshot.close()
         this.snapshot = this.drive.checkout(checkout.length)
-        if (!this._updateTarget) {
-          this._updateTarget = unskippableUpdates[0]
-        }
       }
     } catch { /* ignore */ }
 
