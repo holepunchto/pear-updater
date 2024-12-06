@@ -61,6 +61,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.snapshot = null
     this.updated = false
     this.updating = false
+    this._updateTarget = null
 
     this._mutex = new RW()
     this._running = null
@@ -104,6 +105,8 @@ module.exports = class PearUpdater extends ReadyResource {
       return this.checkout
     }
 
+    if (this._updateTarget !== null && this.checkout.length >= this._updateTarget) return this.checkout
+
     try {
       this.updating = true
       this._running = this._update()
@@ -128,10 +131,23 @@ module.exports = class PearUpdater extends ReadyResource {
       fork: this.drive.core.fork
     }
 
+    this.snapshot = this.drive.checkout(checkout.length)
+
+    try {
+      const latestPackage = JSON.parse(await this.snapshot.get('/package.json'))
+      const unskippableUpdates = (latestPackage.pear?.stage?.unskippableUpdates || [])
+        .filter(u => u > old.length)
+        .sort((a, b) => a - b)
+      if (unskippableUpdates.length > 0) {
+        this._updateTarget = unskippableUpdates[0]
+        checkout.length = this._updateTarget
+        this.snapshot.close()
+        this.snapshot = this.drive.checkout(checkout.length)
+      }
+    } catch { /* ignore */ }
+
     await this.onupdating(checkout, old)
     this.emit('updating', checkout, old)
-
-    this.snapshot = this.drive.checkout(checkout.length)
 
     try {
       await this._updateToSnapshot(checkout)
@@ -281,6 +297,8 @@ module.exports = class PearUpdater extends ReadyResource {
       const local = new Localdrive(this.swap, { atomic: true })
       await local.put('checkout', c.encode(checkout, { ...this.checkout, key: this.drive.core.key }))
       await local.close()
+
+      this._updateTarget = null
 
       this.emit('update-applied', this.checkout)
 
