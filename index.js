@@ -235,7 +235,6 @@ module.exports = class PearUpdater extends ReadyResource {
 
     await this._mutex.write.lock()
 
-    // NOTE: This is where we actually write to the disk
     try {
       const local = new Localdrive(this.swap, { atomic: true })
       await local.put(bundlePath, bundle.toBuffer())
