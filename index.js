@@ -9,6 +9,8 @@ const BareBundle = require('bare-bundle')
 const Localdrive = require('localdrive')
 const { Readable } = require('streamx')
 const safetyCatch = require('safety-catch')
+const hypercoreid = require('hypercore-id-encoding')
+const b4a = require('b4a')
 
 class Watcher extends Readable {
   constructor (updater, opts) {
@@ -32,6 +34,7 @@ module.exports = class PearUpdater extends ReadyResource {
     current = null,
     checkout = null,
     byArch = true,
+    unskippables = true,
     host = getDefaultHost(),
     onupdating = noop,
     onupdate = noop
@@ -61,6 +64,8 @@ module.exports = class PearUpdater extends ReadyResource {
     this.snapshot = null
     this.updated = false
     this.updating = false
+    this.frozen = false
+    this.unskippables = unskippables
 
     this._mutex = new RW()
     this._running = null
@@ -104,6 +109,8 @@ module.exports = class PearUpdater extends ReadyResource {
       return this.checkout
     }
 
+    if (this.frozen) return this.checkout
+
     try {
       this.updating = true
       this._running = this._update()
@@ -128,10 +135,27 @@ module.exports = class PearUpdater extends ReadyResource {
       fork: this.drive.core.fork
     }
 
+    this.snapshot = this.drive.checkout(checkout.length)
+
+    if (this.unskippables) {
+      try {
+        const latestPackage = await readPackageJSON(this.snapshot)
+        const decodedKey = hypercoreid.decode(this.checkout.key)
+        const unskippableUpdates = (latestPackage.pear?.unskippables)
+          .map(({ key, length }) => ({ key: hypercoreid.decode(key), length }))
+          .filter(u => b4a.equals(u.key, decodedKey) && u?.length !== undefined && u?.length > this.checkout.length)
+          .sort((a, b) => a.length - b.length)
+        if (unskippableUpdates.length > 0) {
+          checkout.length = unskippableUpdates[0].length
+          this.frozen = true
+          await this.snapshot.close()
+          this.snapshot = this.drive.checkout(checkout.length)
+        }
+      } catch { /* ignore */ }
+    }
+
     await this.onupdating(checkout, old)
     this.emit('updating', checkout, old)
-
-    this.snapshot = this.drive.checkout(checkout.length)
 
     try {
       await this._updateToSnapshot(checkout)

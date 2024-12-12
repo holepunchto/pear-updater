@@ -24,10 +24,12 @@
     }
   },
   "dependencies": {
+    "b4a": "^1.6.7",
     "bare-bundle": "^1.1.2",
     "compact-encoding": "^2.15.0",
     "drive-bundler": "^2.3.2",
     "fs-native-extensions": "^1.2.0",
+    "hypercore-id-encoding": "^1.3.0",
     "localdrive": "^1.9.0",
     "read-write-mutexify": "^2.1.0",
     "ready-resource": "^1.0.0",
