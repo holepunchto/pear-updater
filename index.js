@@ -63,7 +63,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.snapshot = null
     this.updated = false
     this.updating = false
-    this._updateTarget = null
+    this.frozen = false
 
     this._mutex = new RW()
     this._running = null
@@ -107,9 +107,7 @@ module.exports = class PearUpdater extends ReadyResource {
       return this.checkout
     }
 
-    if (this._updateTarget !== null && this.checkout.length >= this._updateTarget.length) {
-      return this.checkout
-    }
+    if (this.frozen) return this.checkout
 
     try {
       this.updating = true
@@ -145,8 +143,8 @@ module.exports = class PearUpdater extends ReadyResource {
         .filter(u => b4a.equals(u.key, decodedKey) && u?.length !== undefined && u?.length > this.checkout.length)
         .sort((a, b) => a.length - b.length)
       if (unskippableUpdates.length > 0) {
-        this._updateTarget = unskippableUpdates[0]
-        checkout.length = this._updateTarget.length
+        checkout.length = unskippableUpdates[0].length
+        this.frozen = true
         await this.snapshot.close()
         this.snapshot = this.drive.checkout(checkout.length)
       }
@@ -304,7 +302,7 @@ module.exports = class PearUpdater extends ReadyResource {
       await local.put('checkout', c.encode(checkout, { ...this.checkout, key: this.drive.core.key }))
       await local.close()
 
-      this._updateTarget = null
+      this.frozen = false
 
       this.emit('update-applied', this.checkout)
 
