@@ -135,7 +135,7 @@ module.exports = class PearUpdater extends ReadyResource {
 
     try {
       const latestPackage = JSON.parse(await this.snapshot.get('/package.json'))
-      const unskippableUpdates = (latestPackage.pear?.stage?.unskippableUpdates || [])
+      const unskippableUpdates = (latestPackage.pear?.updates?.unskippable || [])
         .filter(u => u > old.length)
         .sort((a, b) => a - b)
       if (unskippableUpdates.length > 0) {

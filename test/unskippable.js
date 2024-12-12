@@ -24,7 +24,7 @@ test('should follow unskippable updates', async function (t) {
   await drive.put('/checkout.js', 'console.log("hello")\nconsole.log("world")')
   await drive.put('/checkout.js', 'console.log("hello")\nconsole.log("world")\nconsole.log("universe")')
   unskippables.push(drive.core.length)
-  await drive.put('/package.json', JSON.stringify({ main: 'own-main.js', pear: { stage: { unskippableUpdates: unskippables } } }))
+  await drive.put('/package.json', JSON.stringify({ main: 'own-main.js', pear: { updates: { unskippable: unskippables } } }))
   t.comment(`Final drive length is ${drive.core.length}`)
 
   t.comment(`Updating to ${unskippables[0]}`)
