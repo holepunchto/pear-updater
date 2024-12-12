@@ -141,7 +141,7 @@ module.exports = class PearUpdater extends ReadyResource {
       if (unskippableUpdates.length > 0) {
         this._updateTarget = unskippableUpdates[0]
         checkout.length = this._updateTarget
-        this.snapshot.close()
+        await this.snapshot.close()
         this.snapshot = this.drive.checkout(checkout.length)
       }
     } catch { /* ignore */ }
