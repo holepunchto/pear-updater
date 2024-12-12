@@ -1,6 +1,6 @@
 const test = require('brittle')
 const tmp = require('test-tmp')
-const { createDrives } = require('./helpers')
+const { createDrives, eventFlush } = require('./helpers')
 const Updater = require('../index')
 const { promises: fsp } = require('fs')
 const path = require('path')
@@ -28,6 +28,7 @@ test('should follow unskippable updates', async function (t) {
   t.comment(`Final drive length is ${drive.core.length}`)
 
   t.comment(`Updating to ${unskippables[0]}`)
+  await eventFlush()
   await u.update()
   await u.applyUpdate()
   const entrypoint1 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
@@ -37,6 +38,7 @@ test('should follow unskippable updates', async function (t) {
   t.is(checkout1.key, drive.core.id, 'Key matches')
 
   t.comment(`Updating to ${unskippables[1]}`)
+  await eventFlush()
   await u.update()
   await u.applyUpdate()
   const entrypoint2 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
@@ -46,6 +48,7 @@ test('should follow unskippable updates', async function (t) {
   t.is(checkout2.key, drive.core.id, 'Key matches')
 
   t.comment(`Updating to ${unskippables[2]}`)
+  await eventFlush()
   await u.update()
   await u.applyUpdate()
   const entrypoint3 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
@@ -55,6 +58,7 @@ test('should follow unskippable updates', async function (t) {
   t.is(checkout3.key, drive.core.id, 'Key matches')
 
   t.comment('Updating to latest')
+  await eventFlush()
   await u.update()
   await u.applyUpdate()
   const entrypoint = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
