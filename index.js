@@ -306,8 +306,6 @@ module.exports = class PearUpdater extends ReadyResource {
       await local.put('checkout', c.encode(checkout, { ...this.checkout, key: this.drive.core.key }))
       await local.close()
 
-      this.frozen = false
-
       this.emit('update-applied', this.checkout)
 
       return this.checkout
