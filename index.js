@@ -9,6 +9,8 @@ const BareBundle = require('bare-bundle')
 const Localdrive = require('localdrive')
 const { Readable } = require('streamx')
 const safetyCatch = require('safety-catch')
+const hypercoreid = require('hypercore-id-encoding')
+const b4a = require('b4a')
 
 class Watcher extends Readable {
   constructor (updater, opts) {
@@ -105,7 +107,7 @@ module.exports = class PearUpdater extends ReadyResource {
       return this.checkout
     }
 
-    if (this._updateTarget !== null && this.checkout.key === this._updateTarget.key && this.checkout.length >= this._updateTarget.length) {
+    if (this._updateTarget !== null && b4a.equals(hypercoreid.decode(this.checkout.key), this._updateTarget.key) && this.checkout.length >= this._updateTarget.length) {
       return this.checkout
     }
 
@@ -137,8 +139,10 @@ module.exports = class PearUpdater extends ReadyResource {
 
     try {
       const latestPackage = JSON.parse(await this.snapshot.get('/package.json'))
+      const decodedKey = hypercoreid.decode(old.key)
       const unskippableUpdates = (latestPackage.pear?.updates?.unskippable)
-        .filter(u => u?.key === old.key && u?.length !== undefined && u?.length > old.length)
+        .map(({ key, length }) => ({ key: hypercoreid.decode(key), length }))
+        .filter(u => b4a.equals(u.key, decodedKey) && u?.length !== undefined && u?.length > old.length)
         .sort((a, b) => a.length - b.length)
       if (unskippableUpdates.length > 0) {
         this._updateTarget = unskippableUpdates[0]
