@@ -12,6 +12,8 @@ const safetyCatch = require('safety-catch')
 const hypercoreid = require('hypercore-id-encoding')
 const b4a = require('b4a')
 
+const ABI = 0
+
 class Watcher extends Readable {
   constructor (updater, opts) {
     super(opts)
@@ -28,13 +30,13 @@ class Watcher extends Readable {
 module.exports = class PearUpdater extends ReadyResource {
   constructor (drive, {
     directory,
+    abi = ABI,
     lock = null,
     swap = null,
     next = null,
     current = null,
     checkout = null,
     byArch = true,
-    unskippables = true,
     host = getDefaultHost(),
     onupdating = noop,
     onupdate = noop
@@ -51,6 +53,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.directory = directory
     this.swap = swap
     this.lock = lock
+    this.abi = abi
 
     this.swapNumber = 0
     this.swapCurrent = 0
@@ -65,7 +68,6 @@ module.exports = class PearUpdater extends ReadyResource {
     this.updated = false
     this.updating = false
     this.frozen = false
-    this.unskippables = unskippables
 
     this._mutex = new RW()
     this._running = null
@@ -137,21 +139,25 @@ module.exports = class PearUpdater extends ReadyResource {
 
     this.snapshot = this.drive.checkout(checkout.length)
 
-    if (this.unskippables) {
-      try {
-        const latestPackage = await readPackageJSON(this.snapshot)
-        const decodedKey = hypercoreid.decode(this.checkout.key)
-        const unskippableUpdates = (latestPackage.pear?.unskippables)
-          .map(({ key, length }) => ({ key: hypercoreid.decode(key), length }))
-          .filter(u => b4a.equals(u.key, decodedKey) && u?.length !== undefined && u?.length > this.checkout.length)
-          .sort((a, b) => a.length - b.length)
-        if (unskippableUpdates.length > 0) {
-          checkout.length = unskippableUpdates[0].length
-          this.frozen = true
-          await this.snapshot.close()
-          this.snapshot = this.drive.checkout(checkout.length)
-        }
-      } catch { /* ignore */ }
+    const conf = await this._getUpdaterConfig()
+
+    if (conf.abi > this.abi) {
+      let compat = null
+
+      for (let i = 0; i < conf.compat.length; i++) {
+        const next = conf.compat[i]
+        if (next.abi > this.abi) break
+        compat = next
+      }
+
+      if (compat === null) {
+        throw new Error('No valid update exist')
+      }
+
+      this.frozen = true
+      checkout.length = compat.length
+      await this.snapshot.close()
+      this.snapshot = this.drive.checkout(checkout.length)
     }
 
     await this.onupdating(checkout, old)
@@ -173,20 +179,18 @@ module.exports = class PearUpdater extends ReadyResource {
     for (const w of this._watchers) w.push(checkout)
   }
 
-  async _needsFullSync (compat) {
-    if (this.checkout === null || this.checkout.length === 0) return false
+  async _getUpdaterConfig () {
+    const pkg = await readPackageJSON(this.snapshot)
+    const updater = [].concat(pkg.updater || pkg.pear?.updater || [])
+    const key = this.snapshot.core.key
 
-    const checkout = this.drive.checkout(this.checkout.length)
-
-    try {
-      const pkg = await readPackageJSON(checkout)
-      const oldCompat = pkg.pear?.platform?.fullSync || 0
-      return oldCompat === compat
-    } catch {
-      return true
-    } finally {
-      await checkout.close()
+    for (const u of updater) {
+      const k = hypercoreid.decode(u.key)
+      if (!b4a.equals(k, key)) continue
+      return { key: k, abi: u.abi || this.abi, compat: (u.compat || []).sort(sortABI) }
     }
+
+    return { key, abi: this.abi, compat: [] }
   }
 
   async _bundleEntrypointAndWarmup (main, subsystems) {
@@ -212,11 +216,7 @@ module.exports = class PearUpdater extends ReadyResource {
     const updateSwap = await this._updateByArch()
     if (updateSwap) await this._updateSwap()
 
-    const compat = pkg.pear?.platform?.fullSync || 0
     const subsystems = pkg.subsystems || pkg.pear?.subsystems || []
-
-    // if the app indicates that its not fully compat, just download everthing in the bundle (minus by-arch)
-    if (!(await this._needsFullSync(compat))) await this._updateNonSparse()
 
     const boot = await this._bundleEntrypointAndWarmup(main, subsystems)
 
@@ -313,22 +313,6 @@ module.exports = class PearUpdater extends ReadyResource {
       if (lock) await closeFd(lock)
       this._mutex.write.unlock()
     }
-  }
-
-  async _updateNonSparse () {
-    const pending = []
-    const entries = []
-
-    for await (const name of this.snapshot.readdir('/')) {
-      if (name === 'by-arch') continue // handled by updateByArch
-      entries.push('/' + name)
-    }
-
-    for (const entry of entries) {
-      pending.push(this.snapshot.download(entry))
-    }
-
-    await Promise.all(pending)
   }
 
   async _updateByArch () {
@@ -489,6 +473,11 @@ function getDefaultHost () {
 
 function isWindows () {
   return global.Bare ? global.Bare.platform === 'win32' : global.process.platform === 'win32'
+}
+
+function sortABI (a, b) {
+  if (a.abi === b.abi) return a.length - b.length
+  return a.abi - b.abi
 }
 
 function closeFd (fd) {

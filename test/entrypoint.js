@@ -86,35 +86,3 @@ test('files referenced in pear.subsystems are present in the drive after update'
   const fromRemote = (await clone.get('/something-irrelevant.js')).toString()
   t.is(fromRemote, '// not an entrypoint', 'sanity check: available remotely')
 })
-
-test('all files are present if compat changes', async function (t) {
-  const directory = await tmp(t)
-  const [drive, clone] = await createDrives(t)
-
-  const u = new Updater(clone, {
-    directory,
-    host: 'universal-universal'
-  })
-
-  const touchAndUpdate = createTouch(drive, u)
-
-  await touchAndUpdate('/checkout.js', '')
-  await touchAndUpdate('/own-main.js', '// own-main\nmodule.exports = require("./checkout.js")')
-  await touchAndUpdate('/own-main2.js', '// second main\nmodule.exports = require("./checkout.js")')
-  await touchAndUpdate('/something-irrelevant.js', '// not an entrypoint')
-
-  await touchAndUpdate(
-    '/package.json',
-    JSON.stringify({ pear: { entrypoints: ['own-main.js', 'own-main2.js'], platform: { fullSync: 1 } } })
-  )
-
-  // Entrypoints are locally available
-  const mainContent = (await clone.get('/own-main.js', { wait: false })).toString()
-  t.is(mainContent, '// own-main\nmodule.exports = require("./checkout.js")')
-
-  const main2Content = (await clone.get('/own-main2.js', { wait: false })).toString()
-  t.is(main2Content, '// second main\nmodule.exports = require("./checkout.js")')
-
-  const otherContent = (await clone.get('/something-irrelevant.js', { wait: false })).toString()
-  t.is(otherContent, '// not an entrypoint')
-})
