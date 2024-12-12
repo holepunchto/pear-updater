@@ -67,3 +67,35 @@ test('should follow unskippable updates', async function (t) {
   t.is(checkout.fork, drive.core.fork, 'Fork matches')
   t.is(checkout.key, drive.core.id, 'Key matches')
 })
+
+test('should skip unskippable updates when disabled', async function (t) {
+  t.plan(3)
+
+  const directory = await tmp(t)
+  const [drive, clone] = await createDrives(t)
+  const u = new Updater(clone, { directory, host: 'universal-universal', unskippables: false })
+
+  const unskippables = []
+
+  await drive.put('/checkout.js', '')
+  await drive.put('/own-main.js', 'module.exports = require("./checkout.js")')
+  await drive.put('/package.json', JSON.stringify({ main: 'own-main.js' }))
+  unskippables.push({ key: drive.core.id, length: drive.core.length })
+  await drive.put('/checkout.js', 'console.log("hello")')
+  unskippables.push({ key: drive.core.id, length: drive.core.length })
+  await drive.put('/checkout.js', 'console.log("hello")\nconsole.log("world")')
+  await drive.put('/checkout.js', 'console.log("hello")\nconsole.log("world")\nconsole.log("universe")')
+  unskippables.push({ key: drive.core.id, length: drive.core.length })
+  await drive.put('/package.json', JSON.stringify({ main: 'own-main.js', pear: { unskippables } }))
+  t.comment(`Final drive length is ${drive.core.length}`)
+
+  t.comment('Updating to latest')
+  await eventFlush()
+  await u.update()
+  await u.applyUpdate()
+  const entrypoint = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
+  const checkout = nodeBundle(entrypoint)
+  t.is(checkout.length, drive.core.length, 'Final checkout matches drive length')
+  t.is(checkout.fork, drive.core.fork, 'Fork matches')
+  t.is(checkout.key, drive.core.id, 'Key matches')
+})
