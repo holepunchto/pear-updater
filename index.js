@@ -139,10 +139,10 @@ module.exports = class PearUpdater extends ReadyResource {
 
     try {
       const latestPackage = JSON.parse(await this.snapshot.get('/package.json'))
-      const decodedKey = hypercoreid.decode(old.key)
+      const decodedKey = hypercoreid.decode(this.checkout.key)
       const unskippableUpdates = (latestPackage.pear?.platform?.unskippableUpdates)
         .map(({ key, length }) => ({ key: hypercoreid.decode(key), length }))
-        .filter(u => b4a.equals(u.key, decodedKey) && u?.length !== undefined && u?.length > old.length)
+        .filter(u => b4a.equals(u.key, decodedKey) && u?.length !== undefined && u?.length > this.checkout.length)
         .sort((a, b) => a.length - b.length)
       if (unskippableUpdates.length > 0) {
         this._updateTarget = unskippableUpdates[0]
