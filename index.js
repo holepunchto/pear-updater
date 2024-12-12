@@ -107,7 +107,7 @@ module.exports = class PearUpdater extends ReadyResource {
       return this.checkout
     }
 
-    if (this._updateTarget !== null && b4a.equals(hypercoreid.decode(this.checkout.key), this._updateTarget.key) && this.checkout.length >= this._updateTarget.length) {
+    if (this._updateTarget !== null && this.checkout.length >= this._updateTarget.length) {
       return this.checkout
     }
 
