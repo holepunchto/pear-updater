@@ -105,7 +105,9 @@ module.exports = class PearUpdater extends ReadyResource {
       return this.checkout
     }
 
-    if (this._updateTarget !== null && this.checkout.length >= this._updateTarget) return this.checkout
+    if (this._updateTarget !== null && this.checkout.key === this._updateTarget.key && this.checkout.length >= this._updateTarget.length) {
+      return this.checkout
+    }
 
     try {
       this.updating = true
@@ -135,12 +137,12 @@ module.exports = class PearUpdater extends ReadyResource {
 
     try {
       const latestPackage = JSON.parse(await this.snapshot.get('/package.json'))
-      const unskippableUpdates = (latestPackage.pear?.updates?.unskippable || [])
-        .filter(u => u > old.length)
-        .sort((a, b) => a - b)
+      const unskippableUpdates = (latestPackage.pear?.updates?.unskippable)
+        .filter(u => u?.key === old.key && u?.length !== undefined && u?.length > old.length)
+        .sort((a, b) => a.length - b.length)
       if (unskippableUpdates.length > 0) {
         this._updateTarget = unskippableUpdates[0]
-        checkout.length = this._updateTarget
+        checkout.length = this._updateTarget.length
         await this.snapshot.close()
         this.snapshot = this.drive.checkout(checkout.length)
       }
