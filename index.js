@@ -129,6 +129,31 @@ module.exports = class PearUpdater extends ReadyResource {
     this.update().catch(safetyCatch)
   }
 
+  async _ensureValidCheckout (checkout) {
+    const conf = await this._getUpdaterConfig()
+    if (conf.abi <= this.abi) return
+
+    let compat = null
+
+    for (const next of conf.compat) {
+      if (next.abi > this.abi) break
+      compat = next
+    }
+
+    if (compat === null) {
+      throw new Error('No valid update exist')
+    }
+
+    if (compat.length < this.checkout.length) {
+      throw new Error('Refusing to go back in time')
+    }
+
+    this.frozen = true
+    checkout.length = compat.length
+    await this.snapshot.close()
+    this.snapshot = this.drive.checkout(checkout.length)
+  }
+
   async _update () {
     const old = this.checkout
     const checkout = {
@@ -139,31 +164,12 @@ module.exports = class PearUpdater extends ReadyResource {
 
     this.snapshot = this.drive.checkout(checkout.length)
 
-    const conf = await this._getUpdaterConfig()
-
-    if (conf.abi > this.abi) {
-      let compat = null
-
-      for (let i = 0; i < conf.compat.length; i++) {
-        const next = conf.compat[i]
-        if (next.abi > this.abi) break
-        compat = next
-      }
-
-      if (compat === null) {
-        throw new Error('No valid update exist')
-      }
-
-      this.frozen = true
-      checkout.length = compat.length
-      await this.snapshot.close()
-      this.snapshot = this.drive.checkout(checkout.length)
-    }
-
-    await this.onupdating(checkout, old)
-    this.emit('updating', checkout, old)
-
     try {
+      await this._ensureValidCheckout(checkout)
+
+      await this.onupdating(checkout, old)
+      this.emit('updating', checkout, old)
+
       await this._updateToSnapshot(checkout)
     } finally {
       await this.snapshot.close()
