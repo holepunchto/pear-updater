@@ -138,7 +138,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.snapshot = this.drive.checkout(checkout.length)
 
     try {
-      const latestPackage = JSON.parse(await this.snapshot.get('/package.json'))
+      const latestPackage = await readPackageJSON(this.snapshot)
       const decodedKey = hypercoreid.decode(this.checkout.key)
       const unskippableUpdates = (latestPackage.pear?.platform?.unskippableUpdates)
         .map(({ key, length }) => ({ key: hypercoreid.decode(key), length }))
