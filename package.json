@@ -26,6 +26,7 @@
   "dependencies": {
     "b4a": "^1.6.7",
     "bare-bundle": "^1.1.2",
+    "bare-fs": "^4.0.1",
     "compact-encoding": "^2.15.0",
     "drive-bundler": "^2.3.2",
     "fs-native-extensions": "^1.2.0",
@@ -46,7 +47,6 @@
     "test-tmp": "^1.0.0"
   },
   "optionalDependencies": {
-    "bare-fs": "^3.0.2",
     "bare-path": "^3.0.0"
   },
   "repository": {
