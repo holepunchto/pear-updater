@@ -11,6 +11,7 @@ const { Readable } = require('streamx')
 const safetyCatch = require('safety-catch')
 const hypercoreid = require('hypercore-id-encoding')
 const b4a = require('b4a')
+const { isWindows, platform, arch } = require('which-runtime')
 
 const ABI = 0
 
@@ -301,7 +302,7 @@ module.exports = class PearUpdater extends ReadyResource {
 
       if (this._shouldUpdateSwap) {
         await fs.promises.symlink(path.resolve(this.swap), this.next, 'junction')
-        if (isWindows() && await exists(this.current)) await fs.promises.unlink(this.current)
+        if (isWindows && await exists(this.current)) await fs.promises.unlink(this.current)
         await fs.promises.rename(this.next, this.current)
       } else if (this._entrypoint) {
         await fs.promises.rename(this._entrypoint + '.next.bundle', this._entrypoint + '.bundle')
@@ -474,11 +475,7 @@ async function readPackageJSON (drive, pkg) {
 function noop () {}
 
 function getDefaultHost () {
-  return require.addon ? require.addon.host : global.process.platform + '-' + global.process.arch
-}
-
-function isWindows () {
-  return global.Bare ? global.Bare.platform === 'win32' : global.process.platform === 'win32'
+  return require.addon ? require.addon.host : platform + '-' + arch
 }
 
 function sortABI (a, b) {
@@ -497,17 +494,23 @@ const checkout = {
     c.fixed32.preencode(state, m.key)
     c.uint.preencode(state, m.length)
     c.uint.preencode(state, m.fork)
+    c.string.preencode(state, platform)
+    c.string.preencode(state, arch)
   },
   encode (state, m) {
     c.fixed32.encode(state, m.key)
     c.uint.encode(state, m.length)
     c.uint.encode(state, m.fork)
+    c.string.encode(state, platform)
+    c.string.encode(state, arch)
   },
   decode (state) {
     return {
       key: c.fixed32.decode(state),
       length: c.uint.decode(state),
-      fork: c.uint.decode(state)
+      fork: c.uint.decode(state),
+      platform: c.string.decode(state),
+      arch: c.string.decode(state)
     }
   }
 }
