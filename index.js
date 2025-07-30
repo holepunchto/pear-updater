@@ -38,6 +38,7 @@ module.exports = class PearUpdater extends ReadyResource {
     current = null,
     checkout = null,
     byArch = true,
+    force = false,
     host = getDefaultHost(),
     onupdating = noop,
     onupdate = noop
@@ -76,6 +77,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this._shouldUpdateSwap = false
     this._entrypoint = null
     this._byArch = byArch ? '/by-arch/' + host : null
+    this._force = force
     this._watchers = new Set()
     this._bumpBound = this._bump.bind(this)
 
@@ -108,7 +110,7 @@ module.exports = class PearUpdater extends ReadyResource {
     if (this._running) await this._running
     if (this._running) return this._running // debounce
 
-    if (this.drive.core.length === this.checkout.length && this.drive.core.fork === this.checkout.fork) {
+    if (this.drive.core.length === this.checkout.length && this.drive.core.fork === this.checkout.fork && !this._force) {
       return this.checkout
     }
 
@@ -220,7 +222,7 @@ module.exports = class PearUpdater extends ReadyResource {
     const pkg = await readPackageJSON(this.snapshot)
     const main = pkg.main || null
 
-    const updateSwap = await this._updateByArch()
+    const updateSwap = await this._updateByArch() || this._force
     if (updateSwap) await this._updateSwap()
 
     const subsystems = pkg.subsystems || pkg.pear?.subsystems || []
