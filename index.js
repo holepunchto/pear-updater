@@ -222,7 +222,7 @@ module.exports = class PearUpdater extends ReadyResource {
     const pkg = await readPackageJSON(this.snapshot)
     const main = pkg.main || null
 
-    const updateSwap = await this._updateByArch() || this._force
+    const updateSwap = await this._updateByArch()
     if (updateSwap) await this._updateSwap()
 
     const subsystems = pkg.subsystems || pkg.pear?.subsystems || []
