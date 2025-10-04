@@ -8,17 +8,17 @@ npm install pear-updater
 
 ## Usage
 
-``` js
+```js
 const PearUpdater = require('pear-updater')
 
 const u = new PearUpdater(drive, {
   directory: '/where/is/platform/dir',
   swap: '/current/swap/to/use/0',
   checkout: { key: 'z32-key-in-use', length: 42, fork: 0 }, // current checkout in swap
-  async onupdating (newCheckout) {
+  async onupdating(newCheckout) {
     // fired before updates with an async ctx
   },
-  async onupdate (newCheckout) {
+  async onupdate(newCheckout) {
     // fired on updates with an async ctx
   }
 })

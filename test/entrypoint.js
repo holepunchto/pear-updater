@@ -42,10 +42,16 @@ test('file referenced in package.json main is put on disk', async function (t) {
   const touchAndUpdate = createTouch(drive, u)
 
   await touchAndUpdate('/checkout.js', '')
-  await touchAndUpdate('/own-main.js', 'module.exports = require("./checkout.js")')
+  await touchAndUpdate(
+    '/own-main.js',
+    'module.exports = require("./checkout.js")'
+  )
   await touchAndUpdate('/package.json', JSON.stringify({ main: 'own-main.js' }))
 
-  const entrypoint = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
+  const entrypoint = await fsp.readFile(
+    path.join(u.swap, 'own-main.bundle'),
+    'utf-8'
+  )
   const checkout = nodeBundle(entrypoint)
 
   t.is(checkout.length, drive.core.length)
@@ -65,8 +71,14 @@ test('files referenced in pear.subsystems are present in the drive after update'
   const touchAndUpdate = createTouch(drive, u)
 
   await touchAndUpdate('/checkout.js', '')
-  await touchAndUpdate('/own-main.js', '// own-main\nmodule.exports = require("./checkout.js")')
-  await touchAndUpdate('/own-main2.js', '// second main\nmodule.exports = require("./checkout.js")')
+  await touchAndUpdate(
+    '/own-main.js',
+    '// own-main\nmodule.exports = require("./checkout.js")'
+  )
+  await touchAndUpdate(
+    '/own-main2.js',
+    '// second main\nmodule.exports = require("./checkout.js")'
+  )
   await touchAndUpdate('/something-irrelevant.js', '// not an entrypoint')
 
   await touchAndUpdate(
@@ -75,14 +87,24 @@ test('files referenced in pear.subsystems are present in the drive after update'
   )
 
   // Entrypoints are locally available
-  const mainContent = (await clone.get('/own-main.js', { wait: false })).toString()
+  const mainContent = (
+    await clone.get('/own-main.js', { wait: false })
+  ).toString()
   t.is(mainContent, '// own-main\nmodule.exports = require("./checkout.js")')
 
-  const main2Content = (await clone.get('/own-main2.js', { wait: false })).toString()
-  t.is(main2Content, '// second main\nmodule.exports = require("./checkout.js")')
+  const main2Content = (
+    await clone.get('/own-main2.js', { wait: false })
+  ).toString()
+  t.is(
+    main2Content,
+    '// second main\nmodule.exports = require("./checkout.js")'
+  )
 
   // Other files are downloaded on-demand
-  await t.exception(clone.get('/something-irrelevant.js', { wait: false }), /BLOCK_NOT_AVAILABLE/)
+  await t.exception(
+    clone.get('/something-irrelevant.js', { wait: false }),
+    /BLOCK_NOT_AVAILABLE/
+  )
   const fromRemote = (await clone.get('/something-irrelevant.js')).toString()
   t.is(fromRemote, '// not an entrypoint', 'sanity check: available remotely')
 })

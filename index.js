@@ -16,33 +16,36 @@ const { isWindows, platform, arch } = require('which-runtime')
 const ABI = 0
 
 class Watcher extends Readable {
-  constructor (updater, opts) {
+  constructor(updater, opts) {
     super(opts)
     this.updater = updater
     this.updater._watchers.add(this)
   }
 
-  _destroy (cb) {
+  _destroy(cb) {
     this.updater._watchers.delete(this)
     cb(null)
   }
 }
 
 module.exports = class PearUpdater extends ReadyResource {
-  constructor (drive, {
-    directory,
-    abi = ABI,
-    lock = null,
-    swap = null,
-    next = null,
-    current = null,
-    checkout = null,
-    byArch = true,
-    force = false,
-    host = getDefaultHost(),
-    onupdating = noop,
-    onupdate = noop
-  } = {}) {
+  constructor(
+    drive,
+    {
+      directory,
+      abi = ABI,
+      lock = null,
+      swap = null,
+      next = null,
+      current = null,
+      checkout = null,
+      byArch = true,
+      force = false,
+      host = getDefaultHost(),
+      onupdating = noop,
+      onupdate = noop
+    } = {}
+  ) {
     if (!directory) throw new Error('directory must be set')
 
     super()
@@ -87,19 +90,23 @@ module.exports = class PearUpdater extends ReadyResource {
     this.ready().catch(safetyCatch)
   }
 
-  async wait ({ length, fork }, opts) {
+  async wait({ length, fork }, opts) {
     for await (const checkout of this.watch(opts)) {
-      if (fork < checkout.fork || (fork === checkout.fork && length <= checkout.length)) return checkout
+      if (
+        fork < checkout.fork ||
+        (fork === checkout.fork && length <= checkout.length)
+      )
+        return checkout
     }
 
     return null
   }
 
-  watch (opts) {
+  watch(opts) {
     return new Watcher(this, opts)
   }
 
-  async update () {
+  async update() {
     if (this.opened === false) await this.ready()
     if (this.closing) throw new Error('Updater closing')
 
@@ -110,7 +117,11 @@ module.exports = class PearUpdater extends ReadyResource {
     if (this._running) await this._running
     if (this._running) return this._running // debounce
 
-    if (this.drive.core.length === this.checkout.length && this.drive.core.fork === this.checkout.fork && !this._force) {
+    if (
+      this.drive.core.length === this.checkout.length &&
+      this.drive.core.fork === this.checkout.fork &&
+      !this._force
+    ) {
       return this.checkout
     }
 
@@ -128,11 +139,11 @@ module.exports = class PearUpdater extends ReadyResource {
     return this.checkout
   }
 
-  _bump () {
+  _bump() {
     this.update().catch(safetyCatch)
   }
 
-  async _ensureValidCheckout (checkout) {
+  async _ensureValidCheckout(checkout) {
     const conf = await this._getUpdaterConfig()
     if (conf.abi <= this.abi) return
 
@@ -157,7 +168,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.snapshot = this.drive.checkout(checkout.length)
   }
 
-  async _update () {
+  async _update() {
     const old = this.checkout
     const checkout = {
       key: this.drive.core.id,
@@ -188,7 +199,7 @@ module.exports = class PearUpdater extends ReadyResource {
     for (const w of this._watchers) w.push(checkout)
   }
 
-  async _getUpdaterConfig () {
+  async _getUpdaterConfig() {
     const pkg = await readPackageJSON(this.snapshot)
     const updater = [].concat(pkg.updater || pkg.pear?.updater || [])
     const key = this.snapshot.core.key
@@ -196,14 +207,19 @@ module.exports = class PearUpdater extends ReadyResource {
     for (const u of updater) {
       const k = hypercoreid.decode(u.key)
       if (!b4a.equals(k, key)) continue
-      return { key: k, abi: u.abi || this.abi, compat: (u.compat || []).sort(sortABI) }
+      return {
+        key: k,
+        abi: u.abi || this.abi,
+        compat: (u.compat || []).sort(sortABI)
+      }
     }
 
     return { key, abi: this.abi, compat: [] }
   }
 
-  async _bundleEntrypointAndWarmup (main, subsystems) {
-    if (main === null && await this.snapshot.entry('/index.js')) main = '/index.js'
+  async _bundleEntrypointAndWarmup(main, subsystems) {
+    if (main === null && (await this.snapshot.entry('/index.js')))
+      main = '/index.js'
 
     const b = new DriveBundler(this.snapshot, {
       entrypoint: main,
@@ -218,7 +234,7 @@ module.exports = class PearUpdater extends ReadyResource {
     return mainBundle
   }
 
-  async _updateToSnapshot (checkout) {
+  async _updateToSnapshot(checkout) {
     const pkg = await readPackageJSON(this.snapshot)
     const main = pkg.main || null
 
@@ -229,7 +245,8 @@ module.exports = class PearUpdater extends ReadyResource {
 
     const boot = await this._bundleEntrypointAndWarmup(main, subsystems)
 
-    if (!boot) { // no main -> no boot.bundle -> return early
+    if (!boot) {
+      // no main -> no boot.bundle -> return early
       await this._mutex.write.lock()
       this._entrypoint = null
       this._shouldUpdateSwap = updateSwap
@@ -245,10 +262,16 @@ module.exports = class PearUpdater extends ReadyResource {
       bundle.write(key, source)
     }
 
-    bundle.write('/checkout.js', Buffer.from(`module.exports = { key: '${checkout.key}', length: ${checkout.length}, fork: ${checkout.fork} }\n`))
+    bundle.write(
+      '/checkout.js',
+      Buffer.from(
+        `module.exports = { key: '${checkout.key}', length: ${checkout.length}, fork: ${checkout.fork} }\n`
+      )
+    )
 
     const entrypointNoExt = boot.entrypoint.replace(/\.[^.]+$/, '')
-    const bundlePath = entrypointNoExt + (updateSwap ? '.bundle' : '.next.bundle')
+    const bundlePath =
+      entrypointNoExt + (updateSwap ? '.bundle' : '.next.bundle')
 
     await this._mutex.write.lock()
 
@@ -264,7 +287,7 @@ module.exports = class PearUpdater extends ReadyResource {
     }
   }
 
-  async _getLock () {
+  async _getLock() {
     if (this.lock === null) return 0
 
     const fd = await new Promise((resolve, reject) => {
@@ -279,10 +302,10 @@ module.exports = class PearUpdater extends ReadyResource {
     return fd
   }
 
-  async _autocorrect () {
+  async _autocorrect() {
     const lock = await this._getLock()
 
-    if (await exists(this.next) && await exists(this.current)) {
+    if ((await exists(this.next)) && (await exists(this.current))) {
       try {
         await fs.promises.unlink(this.next)
       } catch {
@@ -293,7 +316,7 @@ module.exports = class PearUpdater extends ReadyResource {
     if (lock) await closeFd(lock)
   }
 
-  async applyUpdate () {
+  async applyUpdate() {
     await this._mutex.write.lock()
     let lock = 0
 
@@ -303,16 +326,27 @@ module.exports = class PearUpdater extends ReadyResource {
       lock = await this._getLock()
 
       if (this._shouldUpdateSwap) {
-        await fs.promises.symlink(path.resolve(this.swap), this.next, 'junction')
-        if (isWindows && await exists(this.current)) await fs.promises.unlink(this.current)
+        await fs.promises.symlink(
+          path.resolve(this.swap),
+          this.next,
+          'junction'
+        )
+        if (isWindows && (await exists(this.current)))
+          await fs.promises.unlink(this.current)
         await fs.promises.rename(this.next, this.current)
       } else if (this._entrypoint) {
-        await fs.promises.rename(this._entrypoint + '.next.bundle', this._entrypoint + '.bundle')
+        await fs.promises.rename(
+          this._entrypoint + '.next.bundle',
+          this._entrypoint + '.bundle'
+        )
       }
 
       // write checkout file
       const local = new Localdrive(this.swap, { atomic: true })
-      await local.put('checkout', c.encode(checkout, { ...this.checkout, key: this.drive.core.key }))
+      await local.put(
+        'checkout',
+        c.encode(checkout, { ...this.checkout, key: this.drive.core.key })
+      )
       await local.close()
 
       this.emit('update-applied', this.checkout)
@@ -324,7 +358,7 @@ module.exports = class PearUpdater extends ReadyResource {
     }
   }
 
-  async _updateByArch () {
+  async _updateByArch() {
     if (this.snapshot.core.length < 1 || this._byArch === null) return false
 
     const blobs = await this.snapshot.getBlobs()
@@ -333,11 +367,19 @@ module.exports = class PearUpdater extends ReadyResource {
 
     let needsFullUpdate = false
 
-    for await (const { left, right } of this.snapshot.diff(this.checkout.length, this._byArch)) {
+    for await (const { left, right } of this.snapshot.diff(
+      this.checkout.length,
+      this._byArch
+    )) {
       const blob = left && left.value.blob
 
       if (blob) {
-        ranges.push(blobs.core.download({ start: blob.blockOffset, length: blob.blockLength }))
+        ranges.push(
+          blobs.core.download({
+            start: blob.blockOffset,
+            length: blob.blockLength
+          })
+        )
 
         // Just a sanity check so we dont use too much mem (2048 is arbitrary).
         // We just fall back to a full new local mirror if its a really big update
@@ -347,7 +389,11 @@ module.exports = class PearUpdater extends ReadyResource {
         }
 
         // Allow lib updates to be inplace if they are simply a new file addition
-        if (needsFullUpdate === false && right === null && left.key.startsWith(this._byArch + '/lib')) {
+        if (
+          needsFullUpdate === false &&
+          right === null &&
+          left.key.startsWith(this._byArch + '/lib')
+        ) {
           libs.push(left)
           continue
         }
@@ -366,7 +412,7 @@ module.exports = class PearUpdater extends ReadyResource {
     return false
   }
 
-  async _updateSwap () {
+  async _updateSwap() {
     let swapNumber = (this.swapNumber + 1) & 3
     if (swapNumber === this.swapCurrent) swapNumber = (swapNumber + 1) & 3
 
@@ -380,7 +426,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.swapNumber = swapNumber
   }
 
-  async _open () {
+  async _open() {
     await this.drive.ready()
 
     if (this.checkout === null) {
@@ -394,7 +440,12 @@ module.exports = class PearUpdater extends ReadyResource {
     if (this.swap) {
       this.swap = await verifySwap(this.swap)
     } else {
-      this.swap = path.join(this.directory, 'by-dkey', this.drive.discoveryKey.toString('hex'), '0')
+      this.swap = path.join(
+        this.directory,
+        'by-dkey',
+        this.drive.discoveryKey.toString('hex'),
+        '0'
+      )
     }
 
     this.swapNumber = Number(path.basename(this.swap))
@@ -419,7 +470,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this._bump() // bg
   }
 
-  async _close () {
+  async _close() {
     if (this.snapshot) await this.snapshot.close()
 
     this.drive.core.removeListener('append', this._bumpBound)
@@ -430,20 +481,20 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 }
 
-async function verifySwap (swap) {
+async function verifySwap(swap) {
   const st = await fs.promises.lstat(swap)
   if (st.isSymbolicLink()) return verifySwap(await fs.promises.realpath(swap))
   if (st.isDirectory()) return swap
   throw new Error('Swap must be a directory')
 }
 
-async function nuke (path) {
+async function nuke(path) {
   try {
     await fs.promises.rm(path, { recursive: true })
   } catch {}
 }
 
-async function realpath (path) {
+async function realpath(path) {
   try {
     return await fs.promises.realpath(path)
   } catch (err) {
@@ -452,7 +503,7 @@ async function realpath (path) {
   }
 }
 
-async function readdir (path) {
+async function readdir(path) {
   try {
     return await fs.promises.readdir(path)
   } catch (err) {
@@ -461,7 +512,7 @@ async function readdir (path) {
   }
 }
 
-async function exists (path) {
+async function exists(path) {
   try {
     await fs.promises.lstat(path)
     return true
@@ -470,43 +521,43 @@ async function exists (path) {
   }
 }
 
-async function readPackageJSON (drive, pkg) {
+async function readPackageJSON(drive, pkg) {
   return JSON.parse(((await drive.get('/package.json')) || '{}').toString())
 }
 
-function noop () {}
+function noop() {}
 
-function getDefaultHost () {
+function getDefaultHost() {
   return require.addon ? require.addon.host : platform + '-' + arch
 }
 
-function sortABI (a, b) {
+function sortABI(a, b) {
   if (a.abi === b.abi) return a.length - b.length
   return a.abi - b.abi
 }
 
-function closeFd (fd) {
+function closeFd(fd) {
   return new Promise((resolve) => {
     fs.close(fd, () => resolve())
   })
 }
 
 const checkout = {
-  preencode (state, m) {
+  preencode(state, m) {
     c.fixed32.preencode(state, m.key)
     c.uint.preencode(state, m.length)
     c.uint.preencode(state, m.fork)
     c.string.preencode(state, platform)
     c.string.preencode(state, arch)
   },
-  encode (state, m) {
+  encode(state, m) {
     c.fixed32.encode(state, m.key)
     c.uint.encode(state, m.length)
     c.uint.encode(state, m.fork)
     c.string.encode(state, platform)
     c.string.encode(state, arch)
   },
-  decode (state) {
+  decode(state) {
     return {
       key: c.fixed32.decode(state),
       length: c.uint.decode(state),
