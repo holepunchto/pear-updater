@@ -1,6 +1,6 @@
 const test = require('brittle')
 const tmp = require('test-tmp')
-const { createDrives } = require('./helpers')
+const { createDrives, eventFlush } = require('./helpers')
 const Updater = require('../index')
 const { promises: fsp } = require('fs')
 const path = require('path')
@@ -22,16 +22,28 @@ test('should follow uncompat updates', async function (t) {
   await drive.put('/checkout.js', 'console.log("hello")')
   compat.push({ abi: 1, length: drive.core.length })
   await drive.put('/checkout.js', 'console.log("hello")\nconsole.log("world")')
-  await drive.put('/checkout.js', 'console.log("hello")\nconsole.log("world")\nconsole.log("universe")')
+  await drive.put(
+    '/checkout.js',
+    'console.log("hello")\nconsole.log("world")\nconsole.log("universe")'
+  )
   compat.push({ abi: 2, length: drive.core.length })
-  await drive.put('/package.json', JSON.stringify({ main: 'own-main.js', pear: { updater: [{ key: drive.core.id, abi: 3, compat }] } }))
+  await drive.put(
+    '/package.json',
+    JSON.stringify({
+      main: 'own-main.js',
+      pear: { updater: [{ key: drive.core.id, abi: 3, compat }] }
+    })
+  )
   t.comment(`Final drive length is ${drive.core.length}`)
 
   t.comment(`Updating to ${compat[0].length}`)
-  await flush()
+  await eventFlush()
   await u.update()
   await u.applyUpdate()
-  const entrypoint1 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
+  const entrypoint1 = await fsp.readFile(
+    path.join(u.swap, 'own-main.bundle'),
+    'utf-8'
+  )
   await u.close()
   const checkout1 = nodeBundle(entrypoint1)
   t.is(checkout1.length, compat[0].length, 'Checkout matches unskippable')
@@ -39,11 +51,19 @@ test('should follow uncompat updates', async function (t) {
   t.is(checkout1.key, drive.core.id, 'Key matches')
 
   t.comment(`Updating to ${compat[1].length}`)
-  u = new Updater(clone, { abi: 1, directory, host: 'universal-universal', checkout: checkout1 })
-  await flush()
+  u = new Updater(clone, {
+    abi: 1,
+    directory,
+    host: 'universal-universal',
+    checkout: checkout1
+  })
+  await eventFlush()
   await u.update()
   await u.applyUpdate()
-  const entrypoint2 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
+  const entrypoint2 = await fsp.readFile(
+    path.join(u.swap, 'own-main.bundle'),
+    'utf-8'
+  )
   await u.close()
   const checkout2 = nodeBundle(entrypoint2)
   t.is(checkout2.length, compat[1].length, 'Checkout matches unskippable')
@@ -51,11 +71,19 @@ test('should follow uncompat updates', async function (t) {
   t.is(checkout2.key, drive.core.id, 'Key matches')
 
   t.comment(`Updating to ${compat[2].length}`)
-  u = new Updater(clone, { abi: 2, directory, host: 'universal-universal', checkout: checkout2 })
-  await flush()
+  u = new Updater(clone, {
+    abi: 2,
+    directory,
+    host: 'universal-universal',
+    checkout: checkout2
+  })
+  await eventFlush()
   await u.update()
   await u.applyUpdate()
-  const entrypoint3 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
+  const entrypoint3 = await fsp.readFile(
+    path.join(u.swap, 'own-main.bundle'),
+    'utf-8'
+  )
   await u.close()
   const checkout3 = nodeBundle(entrypoint3)
   t.is(checkout3.length, compat[2].length, 'Checkout matches unskippable')
@@ -63,20 +91,26 @@ test('should follow uncompat updates', async function (t) {
   t.is(checkout3.key, drive.core.id, 'Key matches')
 
   t.comment('Updating to latest')
-  u = new Updater(clone, { abi: 3, directory, host: 'universal-universal', checkout: checkout3 })
-  await flush()
+  u = new Updater(clone, {
+    abi: 3,
+    directory,
+    host: 'universal-universal',
+    checkout: checkout3
+  })
+  await eventFlush()
   await u.update()
   await u.applyUpdate()
-  const entrypoint = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
+  const entrypoint = await fsp.readFile(
+    path.join(u.swap, 'own-main.bundle'),
+    'utf-8'
+  )
   await u.close()
   const checkout = nodeBundle(entrypoint)
-  t.is(checkout.length, drive.core.length, 'Final checkout matches drive length')
+  t.is(
+    checkout.length,
+    drive.core.length,
+    'Final checkout matches drive length'
+  )
   t.is(checkout.fork, drive.core.fork, 'Fork matches')
   t.is(checkout.key, drive.core.id, 'Key matches')
-
-  async function flush () {
-    while (u.drive.core.length !== drive.core.length) {
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
-  }
 })

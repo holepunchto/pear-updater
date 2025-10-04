@@ -186,10 +186,15 @@ test('update.wait()', async function (t) {
   const waiting = u.wait({ length: 2, fork: 0 })
   touchAndUpdate(BIN_PATH)
   await t.execution(waiting)
-  await t.exception(Promise.race([
-    u.wait({ length: 3, fork: 0 }),
-    new Promise((resolve, reject) => setTimeout(reject, 500, new Error('correctly waits')))
-  ]), 'correctly waits')
+  await t.exception(
+    Promise.race([
+      u.wait({ length: 3, fork: 0 }),
+      new Promise((resolve, reject) =>
+        setTimeout(reject, 500, new Error('correctly waits'))
+      )
+    ]),
+    'correctly waits'
+  )
 })
 
 test('compat diff triggers non-sparse sync', async function (t) {
