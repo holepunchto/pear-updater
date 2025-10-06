@@ -40,10 +40,7 @@ test('should follow uncompat updates', async function (t) {
   await eventFlush()
   await u.update()
   await u.applyUpdate()
-  const entrypoint1 = await fsp.readFile(
-    path.join(u.swap, 'own-main.bundle'),
-    'utf-8'
-  )
+  const entrypoint1 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
   await u.close()
   const checkout1 = nodeBundle(entrypoint1)
   t.is(checkout1.length, compat[0].length, 'Checkout matches unskippable')
@@ -60,10 +57,7 @@ test('should follow uncompat updates', async function (t) {
   await eventFlush()
   await u.update()
   await u.applyUpdate()
-  const entrypoint2 = await fsp.readFile(
-    path.join(u.swap, 'own-main.bundle'),
-    'utf-8'
-  )
+  const entrypoint2 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
   await u.close()
   const checkout2 = nodeBundle(entrypoint2)
   t.is(checkout2.length, compat[1].length, 'Checkout matches unskippable')
@@ -80,10 +74,7 @@ test('should follow uncompat updates', async function (t) {
   await eventFlush()
   await u.update()
   await u.applyUpdate()
-  const entrypoint3 = await fsp.readFile(
-    path.join(u.swap, 'own-main.bundle'),
-    'utf-8'
-  )
+  const entrypoint3 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
   await u.close()
   const checkout3 = nodeBundle(entrypoint3)
   t.is(checkout3.length, compat[2].length, 'Checkout matches unskippable')
@@ -100,17 +91,10 @@ test('should follow uncompat updates', async function (t) {
   await eventFlush()
   await u.update()
   await u.applyUpdate()
-  const entrypoint = await fsp.readFile(
-    path.join(u.swap, 'own-main.bundle'),
-    'utf-8'
-  )
+  const entrypoint = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
   await u.close()
   const checkout = nodeBundle(entrypoint)
-  t.is(
-    checkout.length,
-    drive.core.length,
-    'Final checkout matches drive length'
-  )
+  t.is(checkout.length, drive.core.length, 'Final checkout matches drive length')
   t.is(checkout.fork, drive.core.fork, 'Fork matches')
   t.is(checkout.key, drive.core.id, 'Key matches')
 })
