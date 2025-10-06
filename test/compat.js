@@ -22,9 +22,18 @@ test('should follow uncompat updates', async function (t) {
   await drive.put('/checkout.js', 'console.log("hello")')
   compat.push({ abi: 1, length: drive.core.length })
   await drive.put('/checkout.js', 'console.log("hello")\nconsole.log("world")')
-  await drive.put('/checkout.js', 'console.log("hello")\nconsole.log("world")\nconsole.log("universe")')
+  await drive.put(
+    '/checkout.js',
+    'console.log("hello")\nconsole.log("world")\nconsole.log("universe")'
+  )
   compat.push({ abi: 2, length: drive.core.length })
-  await drive.put('/package.json', JSON.stringify({ main: 'own-main.js', pear: { updater: [{ key: drive.core.id, abi: 3, compat }] } }))
+  await drive.put(
+    '/package.json',
+    JSON.stringify({
+      main: 'own-main.js',
+      pear: { updater: [{ key: drive.core.id, abi: 3, compat }] }
+    })
+  )
   t.comment(`Final drive length is ${drive.core.length}`)
 
   t.comment(`Updating to ${compat[0].length}`)
@@ -39,7 +48,12 @@ test('should follow uncompat updates', async function (t) {
   t.is(checkout1.key, drive.core.id, 'Key matches')
 
   t.comment(`Updating to ${compat[1].length}`)
-  u = new Updater(clone, { abi: 1, directory, host: 'universal-universal', checkout: checkout1 })
+  u = new Updater(clone, {
+    abi: 1,
+    directory,
+    host: 'universal-universal',
+    checkout: checkout1
+  })
   await eventFlush()
   await u.update()
   await u.applyUpdate()
@@ -51,7 +65,12 @@ test('should follow uncompat updates', async function (t) {
   t.is(checkout2.key, drive.core.id, 'Key matches')
 
   t.comment(`Updating to ${compat[2].length}`)
-  u = new Updater(clone, { abi: 2, directory, host: 'universal-universal', checkout: checkout2 })
+  u = new Updater(clone, {
+    abi: 2,
+    directory,
+    host: 'universal-universal',
+    checkout: checkout2
+  })
   await eventFlush()
   await u.update()
   await u.applyUpdate()
@@ -63,7 +82,12 @@ test('should follow uncompat updates', async function (t) {
   t.is(checkout3.key, drive.core.id, 'Key matches')
 
   t.comment('Updating to latest')
-  u = new Updater(clone, { abi: 3, directory, host: 'universal-universal', checkout: checkout3 })
+  u = new Updater(clone, {
+    abi: 3,
+    directory,
+    host: 'universal-universal',
+    checkout: checkout3
+  })
   await eventFlush()
   await u.update()
   await u.applyUpdate()

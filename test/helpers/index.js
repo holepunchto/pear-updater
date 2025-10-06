@@ -8,11 +8,11 @@ module.exports = {
   createTouch
 }
 
-function eventFlush () {
-  return new Promise(resolve => setImmediate(resolve))
+function eventFlush() {
+  return new Promise((resolve) => setImmediate(resolve))
 }
 
-async function createDrives (t) {
+async function createDrives(t) {
   const drive = new Hyperdrive(new Corestore(RAM.reusable()))
   await drive.ready()
   const clone = new Hyperdrive(new Corestore(RAM.reusable()), drive.core.key)
@@ -30,11 +30,11 @@ async function createDrives (t) {
   return [drive, clone]
 }
 
-function createTouch (drive, u) {
+function createTouch(drive, u) {
   let tick = 0
 
-  return async function touchAndUpdate (key, src) {
-    await drive.put(key, src || ('' + (tick++)))
+  return async function touchAndUpdate(key, src) {
+    await drive.put(key, src || '' + tick++)
     await eventFlush()
     await u.update()
     await u.applyUpdate()
