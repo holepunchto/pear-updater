@@ -189,9 +189,7 @@ test('update.wait()', async function (t) {
   await t.exception(
     Promise.race([
       u.wait({ length: 3, fork: 0 }),
-      new Promise((resolve, reject) =>
-        setTimeout(reject, 500, new Error('correctly waits'))
-      )
+      new Promise((resolve, reject) => setTimeout(reject, 500, new Error('correctly waits')))
     ]),
     'correctly waits'
   )

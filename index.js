@@ -92,10 +92,7 @@ module.exports = class PearUpdater extends ReadyResource {
 
   async wait({ length, fork }, opts) {
     for await (const checkout of this.watch(opts)) {
-      if (
-        fork < checkout.fork ||
-        (fork === checkout.fork && length <= checkout.length)
-      )
+      if (fork < checkout.fork || (fork === checkout.fork && length <= checkout.length))
         return checkout
     }
 
@@ -218,8 +215,7 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async _bundleEntrypointAndWarmup(main, subsystems) {
-    if (main === null && (await this.snapshot.entry('/index.js')))
-      main = '/index.js'
+    if (main === null && (await this.snapshot.entry('/index.js'))) main = '/index.js'
 
     const b = new DriveBundler(this.snapshot, {
       entrypoint: main,
@@ -270,8 +266,7 @@ module.exports = class PearUpdater extends ReadyResource {
     )
 
     const entrypointNoExt = boot.entrypoint.replace(/\.[^.]+$/, '')
-    const bundlePath =
-      entrypointNoExt + (updateSwap ? '.bundle' : '.next.bundle')
+    const bundlePath = entrypointNoExt + (updateSwap ? '.bundle' : '.next.bundle')
 
     await this._mutex.write.lock()
 
@@ -326,19 +321,11 @@ module.exports = class PearUpdater extends ReadyResource {
       lock = await this._getLock()
 
       if (this._shouldUpdateSwap) {
-        await fs.promises.symlink(
-          path.resolve(this.swap),
-          this.next,
-          'junction'
-        )
-        if (isWindows && (await exists(this.current)))
-          await fs.promises.unlink(this.current)
+        await fs.promises.symlink(path.resolve(this.swap), this.next, 'junction')
+        if (isWindows && (await exists(this.current))) await fs.promises.unlink(this.current)
         await fs.promises.rename(this.next, this.current)
       } else if (this._entrypoint) {
-        await fs.promises.rename(
-          this._entrypoint + '.next.bundle',
-          this._entrypoint + '.bundle'
-        )
+        await fs.promises.rename(this._entrypoint + '.next.bundle', this._entrypoint + '.bundle')
       }
 
       // write checkout file
@@ -367,10 +354,7 @@ module.exports = class PearUpdater extends ReadyResource {
 
     let needsFullUpdate = false
 
-    for await (const { left, right } of this.snapshot.diff(
-      this.checkout.length,
-      this._byArch
-    )) {
+    for await (const { left, right } of this.snapshot.diff(this.checkout.length, this._byArch)) {
       const blob = left && left.value.blob
 
       if (blob) {
@@ -440,12 +424,7 @@ module.exports = class PearUpdater extends ReadyResource {
     if (this.swap) {
       this.swap = await verifySwap(this.swap)
     } else {
-      this.swap = path.join(
-        this.directory,
-        'by-dkey',
-        this.drive.discoveryKey.toString('hex'),
-        '0'
-      )
+      this.swap = path.join(this.directory, 'by-dkey', this.drive.discoveryKey.toString('hex'), '0')
     }
 
     this.swapNumber = Number(path.basename(this.swap))
