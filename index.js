@@ -41,7 +41,8 @@ module.exports = class PearUpdater extends ReadyResource {
     force = false,
     host = getDefaultHost(),
     onupdating = noop,
-    onupdate = noop
+    onupdate = noop,
+    onapply = noop
   } = {}) {
     if (!directory) throw new Error('directory must be set')
 
@@ -51,6 +52,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.checkout = checkout
     this.onupdate = onupdate
     this.onupdating = onupdating
+    this.onapply = onapply
 
     this.directory = directory
     this.swap = swap
@@ -299,6 +301,8 @@ module.exports = class PearUpdater extends ReadyResource {
 
     try {
       if (!this.updated) return null
+
+      await this.onapply(this.swap)
 
       lock = await this._getLock()
 
