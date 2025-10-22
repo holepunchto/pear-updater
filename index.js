@@ -302,7 +302,7 @@ module.exports = class PearUpdater extends ReadyResource {
     try {
       if (!this.updated) return null
 
-      await this.onapply(this.swap)
+      if (this.onapply) await this.onapply(this.swap)
 
       lock = await this._getLock()
 
