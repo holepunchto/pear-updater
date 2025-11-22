@@ -106,6 +106,12 @@ module.exports = class PearUpdater extends ReadyResource {
     this.ready().catch(safetyCatch)
   }
 
+  get downloadProgress () {
+    if (this.status === STATUS_UPDATED) return 1
+    if (!this.downloadedBlocksEstimate) return 0
+    return Math.min(0.9, this.downloadedBlocks / this.downloadedBlocksEstimate)
+  }
+
   async wait ({ length, fork }, opts) {
     for await (const checkout of this.watch(opts)) {
       if (fork < checkout.fork || (fork === checkout.fork && length <= checkout.length)) return checkout
