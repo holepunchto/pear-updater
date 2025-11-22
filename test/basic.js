@@ -149,7 +149,9 @@ test('updating and update callbacks are called', async function (t) {
   })
   const touchAndUpdate = createTouch(drive, u)
 
-  await touchAndUpdate(BIN_PATH)
+  try {
+    await touchAndUpdate(BIN_PATH)
+  } catch {} // might throw cause we close above
 })
 
 test('updating flag', async function (t) {

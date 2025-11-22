@@ -1,6 +1,6 @@
 const test = require('brittle')
 const tmp = require('test-tmp')
-const { createDrives, eventFlush } = require('./helpers')
+const { createDrives } = require('./helpers')
 const Updater = require('../index')
 const { promises: fsp } = require('fs')
 const path = require('path')
@@ -28,7 +28,7 @@ test('should follow uncompat updates', async function (t) {
   t.comment(`Final drive length is ${drive.core.length}`)
 
   t.comment(`Updating to ${compat[0].length}`)
-  await eventFlush()
+  await flush()
   await u.update()
   await u.applyUpdate()
   const entrypoint1 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
@@ -40,7 +40,7 @@ test('should follow uncompat updates', async function (t) {
 
   t.comment(`Updating to ${compat[1].length}`)
   u = new Updater(clone, { abi: 1, directory, host: 'universal-universal', checkout: checkout1 })
-  await eventFlush()
+  await flush()
   await u.update()
   await u.applyUpdate()
   const entrypoint2 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
@@ -52,7 +52,7 @@ test('should follow uncompat updates', async function (t) {
 
   t.comment(`Updating to ${compat[2].length}`)
   u = new Updater(clone, { abi: 2, directory, host: 'universal-universal', checkout: checkout2 })
-  await eventFlush()
+  await flush()
   await u.update()
   await u.applyUpdate()
   const entrypoint3 = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
@@ -64,7 +64,7 @@ test('should follow uncompat updates', async function (t) {
 
   t.comment('Updating to latest')
   u = new Updater(clone, { abi: 3, directory, host: 'universal-universal', checkout: checkout3 })
-  await eventFlush()
+  await flush()
   await u.update()
   await u.applyUpdate()
   const entrypoint = await fsp.readFile(path.join(u.swap, 'own-main.bundle'), 'utf-8')
@@ -73,4 +73,10 @@ test('should follow uncompat updates', async function (t) {
   t.is(checkout.length, drive.core.length, 'Final checkout matches drive length')
   t.is(checkout.fork, drive.core.fork, 'Fork matches')
   t.is(checkout.key, drive.core.id, 'Key matches')
+
+  async function flush () {
+    while (u.drive.core.length !== drive.core.length) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+  }
 })
