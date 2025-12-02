@@ -33,7 +33,7 @@ async function createDrives(t) {
 function createTouch(drive, u) {
   let tick = 0
 
-  return async function touchAndUpdate(key, src) {
+  return async function (key, src) {
     await drive.put(key, src || '' + tick++)
     await eventFlush()
     await u.update()
