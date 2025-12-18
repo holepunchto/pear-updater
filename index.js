@@ -242,6 +242,7 @@ module.exports = class PearUpdater extends ReadyResource {
     if (main === null && (await this.snapshot.entry('/index.js'))) main = '/index.js'
 
     const b = new DriveBundler(this.snapshot, {
+      host: this.host,
       entrypoint: main,
       cwd: this.swap,
       absoluteFiles: false
