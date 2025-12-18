@@ -22,9 +22,18 @@ test('should follow uncompat updates', async function (t) {
   await drive.put('/checkout.js', 'console.log("hello")')
   compat.push({ abi: 1, length: drive.core.length })
   await drive.put('/checkout.js', 'console.log("hello")\nconsole.log("world")')
-  await drive.put('/checkout.js', 'console.log("hello")\nconsole.log("world")\nconsole.log("universe")')
+  await drive.put(
+    '/checkout.js',
+    'console.log("hello")\nconsole.log("world")\nconsole.log("universe")'
+  )
   compat.push({ abi: 2, length: drive.core.length })
-  await drive.put('/package.json', JSON.stringify({ main: 'own-main.js', pear: { updater: [{ key: drive.core.id, abi: 3, compat }] } }))
+  await drive.put(
+    '/package.json',
+    JSON.stringify({
+      main: 'own-main.js',
+      pear: { updater: [{ key: drive.core.id, abi: 3, compat }] }
+    })
+  )
   t.comment(`Final drive length is ${drive.core.length}`)
 
   t.comment(`Updating to ${compat[0].length}`)
@@ -74,9 +83,9 @@ test('should follow uncompat updates', async function (t) {
   t.is(checkout.fork, drive.core.fork, 'Fork matches')
   t.is(checkout.key, drive.core.id, 'Key matches')
 
-  async function flush () {
+  async function flush() {
     while (u.drive.core.length !== drive.core.length) {
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
     }
   }
 })

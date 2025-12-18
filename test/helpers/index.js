@@ -6,7 +6,7 @@ module.exports = {
   createTouch
 }
 
-async function createDrives (t) {
+async function createDrives(t) {
   const drive = new Hyperdrive(new Corestore(await t.tmp()))
   await drive.ready()
   const clone = new Hyperdrive(new Corestore(await t.tmp()), drive.core.key)
@@ -24,15 +24,17 @@ async function createDrives (t) {
   return [drive, clone]
 }
 
-function createTouch (drive, u) {
+function createTouch(drive, u) {
   let tick = 0
 
-  return async function touchAndUpdate (key, src) {
-    await drive.put(key, src || ('' + (tick++)))
+  async function touchAndUpdate(key, src) {
+    await drive.put(key, src || '' + tick++)
     while (drive.core.length !== u.drive.core.length) {
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
     }
     await u.update()
     await u.applyUpdate()
   }
+
+  return touchAndUpdate
 }
