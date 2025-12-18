@@ -10,10 +10,16 @@ const Localdrive = require('localdrive')
 const { Readable } = require('streamx')
 const safetyCatch = require('safety-catch')
 const hypercoreid = require('hypercore-id-encoding')
+const speedometer = require('speedometer')
 const b4a = require('b4a')
 const { isWindows, platform, arch } = require('which-runtime')
 
 const ABI = 0
+
+const STATUS_WAITING = 'waiting'
+const STATUS_ASSETS = 'updating-assets'
+const STATUS_BUNDLE = 'updating-bundle'
+const STATUS_UPDATED = 'updated'
 
 class Watcher extends Readable {
   constructor(updater, opts) {
@@ -43,7 +49,8 @@ module.exports = class PearUpdater extends ReadyResource {
       force = false,
       host = getDefaultHost(),
       onupdating = noop,
-      onupdate = noop
+      onupdate = noop,
+      onapply = noop
     } = {}
   ) {
     if (!directory) throw new Error('directory must be set')
@@ -54,6 +61,7 @@ module.exports = class PearUpdater extends ReadyResource {
     this.checkout = checkout
     this.onupdate = onupdate
     this.onupdating = onupdating
+    this.onapply = onapply
 
     this.directory = directory
     this.swap = swap
@@ -87,7 +95,24 @@ module.exports = class PearUpdater extends ReadyResource {
     this.drive.core.on('append', this._bumpBound)
     this.drive.core.on('truncate', this._bumpBound)
 
+    this.status = STATUS_WAITING
+
+    this.downloadedBlocks = 0
+    this.downloadedBlocksEstimate = 0
+    this.downloadedBytes = 0
+    this.downloadSpeed = speedometer()
+
+    this.uploadedBlocks = 0
+    this.uploadedBytes = 0
+    this.uploadSpeed = speedometer()
+
     this.ready().catch(safetyCatch)
+  }
+
+  get downloadProgress() {
+    if (this.status === STATUS_UPDATED) return 1
+    if (!this.downloadedBlocksEstimate) return 0
+    return Math.min(0.9, this.downloadedBlocks / this.downloadedBlocksEstimate)
   }
 
   async wait({ length, fork }, opts) {
@@ -167,6 +192,8 @@ module.exports = class PearUpdater extends ReadyResource {
   }
 
   async _update() {
+    this.status = STATUS_WAITING
+
     const old = this.checkout
     const checkout = {
       key: this.drive.core.id,
@@ -205,11 +232,7 @@ module.exports = class PearUpdater extends ReadyResource {
     for (const u of updater) {
       const k = hypercoreid.decode(u.key)
       if (!b4a.equals(k, key)) continue
-      return {
-        key: k,
-        abi: u.abi || this.abi,
-        compat: (u.compat || []).sort(sortABI)
-      }
+      return { key: k, abi: u.abi || this.abi, compat: (u.compat || []).sort(sortABI) }
     }
 
     return { key, abi: this.abi, compat: [] }
@@ -231,15 +254,37 @@ module.exports = class PearUpdater extends ReadyResource {
     return mainBundle
   }
 
+  async _monitorBackground() {
+    try {
+      const blobs = await this.drive.getBlobs()
+
+      blobs.core.on('upload', (index, byteLength) => {
+        this.uploadedBlocks++
+        this.uploadedBytes += byteLength
+        this.uploadSpeed(byteLength)
+      })
+
+      blobs.core.on('download', (index, byteLength) => {
+        this.downloadedBlocks++
+        this.downloadedBytes += byteLength
+        this.downloadSpeed(byteLength)
+      })
+    } catch {
+      // ignore
+    }
+  }
+
   async _updateToSnapshot(checkout) {
     const pkg = await readPackageJSON(this.snapshot)
     const main = pkg.main || null
 
+    this.status = STATUS_ASSETS
     const updateSwap = await this._updateByArch()
     if (updateSwap) await this._updateSwap()
 
     const subsystems = pkg.subsystems || pkg.pear?.subsystems || []
 
+    this.status = STATUS_BUNDLE
     const boot = await this._bundleEntrypointAndWarmup(main, subsystems)
 
     if (!boot) {
@@ -248,6 +293,7 @@ module.exports = class PearUpdater extends ReadyResource {
       this._entrypoint = null
       this._shouldUpdateSwap = updateSwap
       this._mutex.write.unlock()
+      this.status = STATUS_UPDATED
       return
     }
 
@@ -281,6 +327,8 @@ module.exports = class PearUpdater extends ReadyResource {
     } finally {
       this._mutex.write.unlock()
     }
+
+    this.status = STATUS_UPDATED
   }
 
   async _getLock() {
@@ -318,6 +366,8 @@ module.exports = class PearUpdater extends ReadyResource {
 
     try {
       if (!this.updated) return null
+
+      if (this.onapply) await this.onapply(this.swap)
 
       lock = await this._getLock()
 
@@ -359,12 +409,7 @@ module.exports = class PearUpdater extends ReadyResource {
       const blob = left && left.value.blob
 
       if (blob) {
-        ranges.push(
-          blobs.core.download({
-            start: blob.blockOffset,
-            length: blob.blockLength
-          })
-        )
+        ranges.push({ start: blob.blockOffset, length: blob.blockLength })
 
         // Just a sanity check so we dont use too much mem (2048 is arbitrary).
         // We just fall back to a full new local mirror if its a really big update
@@ -387,7 +432,20 @@ module.exports = class PearUpdater extends ReadyResource {
       needsFullUpdate = true
     }
 
-    for (const r of ranges) await r.done()
+    const dls = []
+    for (const r of ranges) {
+      const dl = blobs.core.download(r)
+      await dl.ready()
+      dls.push(dl)
+    }
+
+    this.downloadedBlocksEstimate = this.downloadedBlocks
+    for (const r of dls) {
+      if (!r.request.context) continue
+      this.downloadedBlocksEstimate += r.request.context.end - r.request.context.start
+    }
+
+    for (const r of dls) await r.done()
     if (needsFullUpdate || libs.length === 0) return needsFullUpdate
 
     const local = new Localdrive(this.swap, { atomic: true })
@@ -447,6 +505,7 @@ module.exports = class PearUpdater extends ReadyResource {
       await nuke(swap) // unused, nuke it
     }
 
+    this._monitorBackground()
     this._bump() // bg
   }
 
