@@ -245,7 +245,8 @@ module.exports = class PearUpdater extends ReadyResource {
       host: this.host,
       entrypoint: main,
       cwd: this.swap,
-      absoluteFiles: false
+      absoluteFiles: false,
+      runtimes: ['bare']
     })
 
     const pending = [main ? b.bundle() : null]
